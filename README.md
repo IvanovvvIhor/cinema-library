@@ -1,75 +1,28 @@
-# React + TypeScript + Vite
+# DeepFocus — Веборієнтована система каталогізації та рецензування кіно
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 📌 Про проєкт
+**DeepFocus** — це сучасна інформаційна система, розроблена як дипломний проєкт у **Олександрійському політехнічному фаховому коледжі**. [cite_start]Система призначена для пошуку кінематографічного контенту, ведення персональних списків перегляду та написання рецензій користувачами[cite: 14, 111].
 
-Currently, two official plugins are available:
+[cite_start]Головна особливість проєкту — інтеграція з всесвітньою базою даних фільмів через API та унікальний UI/UX дизайн з акцентом на візуальний досвід[cite: 178, 559].
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠 Стек технологій
+[cite_start]Проєкт побудований на сучасному Full Stack стеку [cite: 39, 613-616]:
+* [cite_start]**Frontend:** React + Vite + TypeScript[cite: 130, 615].
+* [cite_start]**Backend as a Service:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, RLS)[cite: 612, 615, 667].
+* **API:** [The Movie Database (TMDB)](https://www.themoviedb.org/) для отримання актуальних даних про фільми.
+* [cite_start]**Design:** Figma (індивідуальний стиль "Gothic Dark" та "Ivory Light")[cite: 562, 569].
 
-## React Compiler
+## 🚀 Основний функціонал
+* [cite_start]**Каталогізація:** Пошук та фільтрація фільмів за різними критеріями[cite: 19, 172].
+* **Рецензування:** Можливість залишати оцінки та текстові відгуки, які зберігаються в базі даних Supabase.
+* **Персоналізація:** Створення власних списків перегляду (Watchlist).
+* **Гейміфікація:** Система досягнень та статистики переглядів користувача.
+* **Адаптивність:** Повна підтримка на десктопах, планшетах та мобільних пристроях.
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## 📦 Встановлення та запуск
+[cite_start]Щоб запустити проєкт локально, виконайте наступні кроки [cite: 694, 720-722]:
 
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. **Клонуйте репозиторій:**
+   ```bash
+   git clone [https://github.com/ваш-логін/cinema-library-deepfocus.git](https://github.com/ваш-логін/cinema-library-deepfocus.git)
+   cd cinema-library-deepfocus
