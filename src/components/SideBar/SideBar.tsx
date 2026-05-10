@@ -43,7 +43,7 @@ export const SideBar: React.FC = () => {
         <Link to={'/'} className="flex items-center gap-3 transition-opacity hover:opacity-80">
           {/* Логотип - завжди оригінального кольору */}
           <img 
-            src="/images/Logo.svg" 
+            src="../../images/Logo.svg" 
             alt="Logo" 
             className="w-10 h-10 object-contain" 
           />
