@@ -157,48 +157,60 @@ export const CatalogPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50 dark:bg-[#111] overflow-hidden transition-colors relative">
-      <header className="shrink-0 z-10 bg-white dark:bg-[#111] border-b border-gray-200 dark:border-[#222] px-8 py-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-gray-900 dark:text-white text-xl font-bold tracking-tight">
+      
+      {/* HEADER SECTION */}
+      <header className="shrink-0 z-10 bg-white dark:bg-[#111] border-b border-gray-200 dark:border-[#222] px-4 md:px-8 py-4 flex flex-col gap-4">
+        
+        {/* Row 1: Title, Modes and Search/Sort */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <h1 className="text-gray-900 dark:text-white text-xl font-bold tracking-tight whitespace-nowrap">
               {isSelectionMode ? `${t('catalog.selected', 'Selected')}: ${selectedIds.length}` : t('catalog.title')}
             </h1>
-            {!isSelectionMode ? (
-              <button onClick={() => setIsSelectionMode(true)} className="text-xs font-bold text-[#e50914] hover:underline uppercase tracking-wider">
-                {t('catalog.selectMultiple', 'Select Multiple')}
-              </button>
-            ) : (
-              <button onClick={cancelSelection} className="text-xs font-bold text-gray-500 hover:underline uppercase tracking-wider">
-                {t('catalog.cancel', 'Cancel')}
-              </button>
-            )}
-            {!isSelectionMode && (
-              <nav className="flex items-center gap-1 bg-gray-100 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-1">
-                {SUB_NAV_LINKS.map((link) => (
-                  <NavLink key={link.to} to={link.to} end className={({ isActive }) => `px-4 py-2 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-[#e50914] text-white shadow-md" : "text-gray-600 dark:text-[#8c8c8c] hover:bg-gray-200 dark:hover:bg-[#2a2a2a]"}`}>{link.label}</NavLink>
-                ))}
-              </nav>
-            )}
+            
+            <div className="flex items-center gap-3">
+              {!isSelectionMode ? (
+                <button onClick={() => setIsSelectionMode(true)} className="text-xs font-bold text-[#e50914] hover:underline uppercase tracking-wider whitespace-nowrap">
+                  {t('catalog.selectMultiple', 'Select Multiple')}
+                </button>
+              ) : (
+                <button onClick={cancelSelection} className="text-xs font-bold text-gray-500 hover:underline uppercase tracking-wider whitespace-nowrap">
+                  {t('catalog.cancel', 'Cancel')}
+                </button>
+              )}
+
+              {!isSelectionMode && (
+                <nav className="flex items-center gap-1 bg-gray-100 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-1 overflow-x-auto no-scrollbar">
+                  {SUB_NAV_LINKS.map((link) => (
+                    <NavLink key={link.to} to={link.to} end className={({ isActive }) => `px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "bg-[#e50914] text-white shadow-md" : "text-gray-600 dark:text-[#8c8c8c] hover:bg-gray-200 dark:hover:bg-[#2a2a2a]"}`}>{link.label}</NavLink>
+                  ))}
+                </nav>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative w-64">
-              <img src="/images/icons/Search.png" alt="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+
+          <div className="flex items-center gap-2 md:gap-4 w-full lg:w-auto">
+            <div className="relative flex-1 lg:w-64">
+              <img src="images/icons/Search.png" alt="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('catalog.searchPlaceholder')} className="w-full bg-gray-100 dark:bg-[#1c1c1c] border border-transparent rounded-full px-4 py-2 pl-10 text-gray-900 dark:text-white text-[13px] outline-none transition-colors focus:border-[#e50914]" />
             </div>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-gray-100 dark:bg-[#1c1c1c] border border-transparent text-gray-700 dark:text-[#8c8c8c] text-[13px] rounded-full px-4 py-2 outline-none cursor-pointer">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-gray-100 dark:bg-[#1c1c1c] border border-transparent text-gray-700 dark:text-[#8c8c8c] text-[13px] rounded-full px-4 py-2 outline-none cursor-pointer shrink-0">
               {SORT_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
             </select>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => {searchParams.delete('genres'); setSearchParams(searchParams);}} className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${activeGenres.length === 0 ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t('catalog.all')}</button>
+
+        {/* Row 2: Genre Filters with horizontal scroll */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+          <button onClick={() => {searchParams.delete('genres'); setSearchParams(searchParams);}} className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors whitespace-nowrap ${activeGenres.length === 0 ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t('catalog.all')}</button>
           {GENRE_FILTERS.map((genre) => (
-            <button key={genre} onClick={() => toggleGenre(genre)} className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${activeGenres.includes(genre) ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t(`genres.${genre}`)}</button>
+            <button key={genre} onClick={() => toggleGenre(genre)} className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-colors whitespace-nowrap ${activeGenres.includes(genre) ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t(`genres.${genre}`)}</button>
           ))}
         </div>
       </header>
 
-      <div className="flex-1 px-8 py-5 flex flex-col min-h-0">
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 px-4 md:px-8 py-5 flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2">
           {isLoading && displayMovies.length === 0 ? (
             <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div></div>
@@ -211,18 +223,20 @@ export const CatalogPage: React.FC = () => {
           ) : (<p className="text-center text-gray-500 mt-10">{t('catalog.noMovies')}</p>)}
         </div>
 
+        {/* PAGINATION */}
         {!isSelectionMode && loadedMovies.length > 0 && (
-          <div className="shrink-0 mt-4 pt-4 border-t border-gray-200 dark:border-[#222] flex items-center justify-center gap-6">
-            <button onClick={() => setUiPage(prev => Math.max(prev - 1, 1))} disabled={uiPage === 1} className="text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors font-medium text-sm">← {t('catalog.prev')}</button>
+          <div className="shrink-0 mt-4 pt-4 border-t border-gray-200 dark:border-[#222] flex items-center justify-center gap-6 pb-2">
+            <button onClick={() => setUiPage(prev => Math.max(prev - 1, 1))} disabled={uiPage === 1} className="text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 transition-colors font-medium text-sm">← {t('catalog.prev')}</button>
             <span className="text-gray-900 dark:text-white text-sm font-bold bg-gray-100 dark:bg-[#1c1c1c] px-4 py-1.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a]">{t('catalog.page')} {uiPage}</span>
             <button onClick={handleNextPage} disabled={displayMovies.length < ITEMS_PER_UI_PAGE && !hasMoreTMDB} className="text-[#e50914] hover:text-red-600 disabled:opacity-30 transition-colors font-medium text-sm">{t('catalog.next')} →</button>
           </div>
         )}
       </div>
 
+      {/* BULK SELECTION ACTION BAR */}
       {isSelectionMode && selectedIds.length > 0 && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-white dark:bg-[#1c1c1c] border border-gray-200 dark:border-[#2a2a2a] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 backdrop-blur-xl relative">
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300 w-[90%] max-w-lg">
+          <div className="bg-white dark:bg-[#1c1c1c] border border-gray-200 dark:border-[#2a2a2a] px-6 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-6 backdrop-blur-xl relative">
             
             {isBulkPopoverOpen && (
               <BulkAddToListPopover 
@@ -239,15 +253,17 @@ export const CatalogPage: React.FC = () => {
               <button onClick={() => setSelectedIds([])} className="text-[10px] text-[#e50914] font-bold uppercase text-left hover:underline">Deselect all</button>
             </div>
             
-            <div className="h-8 w-px bg-gray-200 dark:bg-[#333]" />
-            
-            <button 
-              className={`flex items-center gap-2 px-4 py-2 bg-[#e50914] text-white text-xs font-bold rounded-xl hover:bg-red-600 transition ${isBulkPopoverOpen ? 'ring-2 ring-white' : ''}`}
-              onClick={() => setIsBulkPopoverOpen(!isBulkPopoverOpen)}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-              {t('catalog.addToWatchlist', 'Add to Lists')}
-            </button>
+            <div className="flex items-center gap-3">
+               <div className="h-8 w-px bg-gray-200 dark:bg-[#333] hidden sm:block" />
+               <button 
+                className={`flex items-center gap-2 px-4 py-2 bg-[#e50914] text-white text-xs font-bold rounded-xl hover:bg-red-600 transition ${isBulkPopoverOpen ? 'ring-2 ring-white' : ''}`}
+                onClick={() => setIsBulkPopoverOpen(!isBulkPopoverOpen)}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                <span className="hidden sm:inline">{t('catalog.addToWatchlist', 'Add to Lists')}</span>
+                <span className="sm:hidden">+ List</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -14,7 +14,6 @@ export const BottomNav: React.FC = () => {
   // #endregion
 
   // #region Допоміжні методи стилізації (Helper Methods)
-  // Функція для динамічної зміни класів іконок залежно від активного маршруту
   const getIconClass = ({ isActive }: { isActive: boolean }) =>
     `flex flex-col items-center justify-center gap-1 w-14 transition-all duration-300 ${
       isActive 
@@ -26,7 +25,7 @@ export const BottomNav: React.FC = () => {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#111]/95 backdrop-blur-lg border-t border-gray-200 dark:border-[#222] px-4 pb-safe flex justify-between items-center h-[70px] z-50 transition-colors duration-300">
       
-      {/* 1. Home - Перехід до головного каталогу */}
+      {/* 1. Home */}
       <NavLink to="/catalog" className={getIconClass} end>
         {({ isActive }) => (
           <>
@@ -38,7 +37,7 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 2. Top Rated - Рейтингові фільми */}
+      {/* 2. Top Rated */}
       <NavLink to="/catalog/topRated" className={getIconClass}>
         {({ isActive }) => (
           <>
@@ -50,19 +49,21 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 3. Центральна кнопка дії - Швидкий доступ до налаштувань */}
+      {/* 3. Центральна кнопка дії - ІКОНКА НАЛАШТУВАНЬ (Шестерня) */}
       <div className="relative -top-4">
         <button 
           onClick={() => navigate('/settings')}
-          className="w-[56px] h-[52px] bg-[#e50914] rounded-2xl flex items-center justify-center text-white shadow-[0_8px_20px_rgba(229,9,20,0.4)] active:scale-90 transition-all duration-200"
+          className="w-[56px] h-[52px] bg-[#e50914] rounded-2xl flex items-center justify-center text-white shadow-[0_8px_20px_rgba(229,9,20,0.4)] active:scale-90 active:rotate-45 transition-all duration-300"
         >
-          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          {/* SVG іконка шестерні (Settings) */}
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
       </div>
 
-      {/* 4. Watchlist - Список обраного */}
+      {/* 4. Watchlist */}
       <NavLink to="/WatchList" className={getIconClass}>
         {({ isActive }) => (
           <>
@@ -74,7 +75,7 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 5. Profile / Settings - Особистий кабінет або вхід */}
+      {/* 5. Profile / Settings */}
       <NavLink to={user ? "/profile" : "/settings"} className={getIconClass}>
         {({ isActive }) => (
           <>
