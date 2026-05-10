@@ -1,49 +1,72 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { removeMovieFromList, updateListCover } from "../store/watchlistSlice"; // ДОДАНО updateListCover
+import { removeMovieFromList, updateListCover } from "../store/watchlistSlice";
 import { useTranslation } from "react-i18next";
 
 export const WatchlistDetailPage: React.FC = () => {
+  // #region Хуки та Навігація
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
-  
-  const user = useAppSelector((state) => state.auth.user);
-  const list = useAppSelector((state) => state.watchlist.lists.find((l) => l.id === id));
+  // #endregion
 
+  // #region Селектори Redux (Отримання даних списку)
+  const user = useAppSelector((state) => state.auth.user);
+  const list = useAppSelector((state) => 
+    state.watchlist.lists.find((l) => l.id === id)
+  );
+  // #endregion
+
+  // #region Перевірка доступу (Access Control)
   if (!list || (list.visibility === 'Private' && list.ownerId !== user?.id)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#111] text-gray-900 dark:text-white transition-colors duration-300">
         <span className="text-4xl mb-4">🚷</span>
         <h2 className="text-xl font-bold mb-2">List not found</h2>
-        <button onClick={() => navigate(-1)} className="px-6 py-2 bg-gray-200 dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl hover:bg-gray-300 transition-colors mt-4">Go Back</button>
+        <button 
+          onClick={() => navigate(-1)} 
+          className="px-6 py-2 bg-gray-200 dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl hover:bg-gray-300 transition-colors mt-4"
+        >
+          Go Back
+        </button>
       </div>
     );
   }
+  // #endregion
 
-  // Обкладинка: пріоритет у кастомної, потім постер першого фільму
+  // #region Допоміжні розрахунки (Обкладинка та Форматування)
+  // Пріоритет: кастомна обкладинка -> постер першого фільму -> null
   const coverImage = list.coverUrl || (list.movies.length > 0 ? list.movies[0].posterUrl : null);
+  // #endregion
 
+  // #region Обробники подій (Handlers)
+  
+  // Видалення одного фільму зі списку
   const handleRemoveMovie = (movieId: number) => {
     dispatch(removeMovieFromList({ listId: list.id, movieId }));
   };
 
-  // ФУНКЦІЯ ДЛЯ ЗМІНИ ОБКЛАДИНКИ
+  // Зміна обкладинки списку через URL
   const handleChangeCover = () => {
     if (list.ownerId !== user?.id) return;
     
-    const newUrl = window.prompt(t('settings.enterAvatarUrl') || "Enter cover image URL:", list.coverUrl || "");
+    const newUrl = window.prompt(
+      t('settings.enterAvatarUrl') || "Enter cover image URL:", 
+      list.coverUrl || ""
+    );
+    
     if (newUrl !== null) {
       dispatch(updateListCover({ listId: list.id, coverUrl: newUrl.trim() }));
     }
   };
+  // #endregion
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] overflow-y-auto relative transition-colors duration-300">
       
-      {/* Імерсивний фон */}
+      {/* Імерсивний фоновий градієнт, що підлаштовується під обкладинку */}
       <div className="absolute top-0 left-0 w-full h-[500px] pointer-events-none overflow-hidden opacity-30">
         {coverImage ? (
           <img src={coverImage} alt="blur" className="w-full h-full object-cover blur-3xl scale-150 transition-opacity duration-300" />
@@ -55,7 +78,7 @@ export const WatchlistDetailPage: React.FC = () => {
 
       <div className="relative z-10 flex flex-col md:flex-row gap-8 px-8 py-12 max-w-[1400px] mx-auto w-full">
         
-        {/* ЛІВА КОЛОНКА */}
+        {/* ЛІВА КОЛОНКА: Інформація про список та Обкладинка */}
         <aside className="w-full md:w-[300px] flex-shrink-0 flex flex-col gap-6">
           <div className="relative group/cover w-full aspect-square bg-gray-200 dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-gray-300 dark:border-[#2a2a2a] transition-all duration-300">
             {coverImage ? (
@@ -64,7 +87,7 @@ export const WatchlistDetailPage: React.FC = () => {
               <div className="w-full h-full flex items-center justify-center text-6xl opacity-20 dark:opacity-10">🎬</div>
             )}
 
-            {/* Кнопка редагування (показується при наведенні) */}
+            {/* Кнопка зміни обкладинки (тільки для власника) */}
             {list.ownerId === user?.id && (
               <button 
                 onClick={handleChangeCover}
@@ -97,7 +120,7 @@ export const WatchlistDetailPage: React.FC = () => {
           </div>
         </aside>
 
-        {/* ПРАВА КОЛОНКА */}
+        {/* ПРАВА КОЛОНКА: Таблиця фільмів */}
         <main className="flex-1 flex flex-col min-w-0">
           {list.movies.length > 0 && (
             <div className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 dark:border-[#222] text-gray-500 dark:text-[#666] text-xs font-medium uppercase tracking-wider mb-2 hidden sm:flex">
@@ -140,7 +163,14 @@ export const WatchlistDetailPage: React.FC = () => {
                   <div className="w-32 text-right text-gray-500 dark:text-[#666] text-xs hidden sm:block pr-4">{new Date(movie.addedAt).toLocaleDateString()}</div>
                   <div className="w-10 flex justify-end shrink-0">
                     {list.ownerId === user?.id && (
-                      <button onClick={() => handleRemoveMovie(movie.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-[#e50914] transition-all opacity-0 group-hover:opacity-100"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                      <button 
+                        onClick={() => handleRemoveMovie(movie.id)} 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-[#e50914] transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     )}
                   </div>
                 </div>

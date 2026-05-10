@@ -4,12 +4,14 @@ import type { Movie } from "../../types/Movie";
 import { useAppSelector } from "../../store/hooks";
 import { AddToListPopover } from "../AddToListPopover/AddToListPopover";
 
+// #region Інтерфейси
 interface MovieCardProps {
   movie: Movie;
-  isSelectionMode?: boolean; // Режим виділення увімкнено?
-  isSelected?: boolean;      // Ця конкретна картка вибрана?
-  onToggleSelection?: (id: number) => void; // Функція кліку по чекбоксу
+  isSelectionMode?: boolean; // Чи активовано режим масового виділення
+  isSelected?: boolean;      // Чи вибрана ця конкретна картка
+  onToggleSelection?: (id: number) => void; // Функція для перемикання стану вибору
 }
+// #endregion
 
 export const MovieCard: React.FC<MovieCardProps> = ({ 
   movie, 
@@ -17,15 +19,20 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   isSelected, 
   onToggleSelection 
 }) => {
+  // #region Стейт та Селектори
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
+  // #endregion
 
+  // #region Обробники подій (Handlers)
   const handleCardClick = (e: React.MouseEvent) => {
+    // Якщо режим вибору активний, замість переходу по лінку перемикаємо чекбокс
     if (isSelectionMode && onToggleSelection) {
-      e.preventDefault(); // Блокуємо перехід по посиланню
+      e.preventDefault(); 
       onToggleSelection(movie.id);
     }
   };
+  // #endregion
 
   return (
     <div 
@@ -37,7 +44,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         }`}
     >
       
-      {/* ЧЕКБОКС (Показується тільки в режимі вибору) */}
+      {/* Елемент вибору (Чекбокс) - видимий лише в режимі вибору */}
       {isSelectionMode && (
         <div className="absolute top-3 left-3 z-30">
           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -54,7 +61,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </div>
       )}
 
-      {/* Кнопка додавання у списки (Прихована в режимі вибору) */}
+      {/* Швидке додавання у списки - приховано в режимі вибору */}
       {user && !isSelectionMode && (
         <div className="absolute top-2 left-2 z-20">
           <button
@@ -80,26 +87,37 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </div>
       )}
 
+      {/* Основний контент картки */}
       <Link 
         to={isSelectionMode ? "#" : `/movie/${movie.id}`} 
         className="flex flex-col h-full rounded-xl overflow-hidden"
       >
+        {/* Постер фільму */}
         <div className="relative w-full aspect-[2/3] bg-gray-100 dark:bg-[#111]">
           {movie.posterUrl ? (
-            <img src={movie.posterUrl} alt={movie.title} className={`w-full h-full object-cover transition-all duration-500 ${isSelected ? 'opacity-60 scale-95' : 'group-hover:scale-105'}`} />
+            <img 
+              src={movie.posterUrl} 
+              alt={movie.title} 
+              className={`w-full h-full object-cover transition-all duration-500 ${isSelected ? 'opacity-60 scale-95' : 'group-hover:scale-105'}`} 
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="text-gray-400 dark:text-[#333] text-sm font-medium">No Image</span>
             </div>
           )}
+          
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           
+          {/* Рейтинг фільму */}
           <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 backdrop-blur-sm rounded-md px-1.5 py-0.5 z-10">
-            <svg className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+            <svg className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
             <span className="text-white text-[11px] font-bold">{movie.rating.toFixed(1)}</span>
           </div>
         </div>
 
+        {/* Текстова інформація */}
         <div className="p-3 flex flex-col gap-0.5 flex-1 z-10 bg-white dark:bg-[#1a1a1a] transition-colors duration-300">
           <h3 className="text-gray-900 dark:text-white text-[13px] font-semibold leading-tight line-clamp-1 group-hover:text-[#e50914] transition-colors duration-200">
             {movie.title}

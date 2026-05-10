@@ -3,13 +3,15 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from "react-i18next"; 
 
 export const SideBar: React.FC = () => {
+  // #region Хуки та Параметри URL
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const currentGenres = searchParams.get('genres') || '';
-  
-  // Дістаємо функцію перекладу
   const { t } = useTranslation();
+  // #endregion
 
+  // #region Допоміжні методи стилізації (Helper Methods)
+  
   // Базові посилання (Catalog, Top Rated, Watchlist)
   const getBaseLinkClass = (path: string) => {
     const isActive = location.pathname === path || (path === '/catalog' && location.pathname === '/');
@@ -20,7 +22,7 @@ export const SideBar: React.FC = () => {
     }`;
   };
 
-  // Жанрові посилання (перевіряємо URL параметри)
+  // Жанрові посилання (перевіряємо активність через параметри запиту)
   const getGenreLinkClass = (genre: string) => {
     const isActive = currentGenres.includes(genre);
     return `flex items-center gap-3 px-4 py-2 rounded-xl text-[14px] font-medium transition-colors ${
@@ -30,14 +32,17 @@ export const SideBar: React.FC = () => {
     }`;
   };
 
+  // Формування URL для фільтрації за жанром
   const buildGenreUrl = (genre: string) => {
     const basePath = location.pathname.includes('/catalog') ? location.pathname : '/catalog';
     return `${basePath}?genres=${genre}`;
   };
+  // #endregion
 
   return (
     <aside className="hidden md:flex w-[260px] h-screen bg-white dark:bg-[#111111] border-r border-gray-200 dark:border-[#222] flex-col py-6 px-4 shrink-0 transition-colors duration-300 z-50">
 
+      {/* LOGO SECTION */}
       <div className="shrink-0 mb-8">
         <Link to={'/'} className="block px-3 transition-opacity hover:opacity-80">
           <img src="/images/Logo.svg" alt="Cinema Library" className="w-[100%] h-auto invert dark:invert-0 transition-all duration-300" />
@@ -46,9 +51,9 @@ export const SideBar: React.FC = () => {
 
       <nav className="flex-grow overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
         
-        {/* DISCOVER */}
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4 transition-colors">
+        {/* 1. DISCOVER - Основна навігація по каталогу */}
+        <div className="mb-4">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4">
             {t('sidebar.discover')}
           </p>
           <ul className="flex flex-col gap-0.5">
@@ -79,11 +84,11 @@ export const SideBar: React.FC = () => {
           </ul>
         </div>
 
-        <div className="h-px bg-gray-200 dark:bg-[#222] mx-4 my-4 transition-colors" />
+        <div className="h-px bg-gray-200 dark:bg-[#222] mx-4 my-4" />
 
-        {/* GENRES */}
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4 transition-colors">
+        {/* 2. GENRES - Фільтрація за категоріями */}
+        <div className="mb-4">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4">
             {t('sidebar.genres')}
           </p>
           <ul className="flex flex-col gap-0.5">
@@ -96,11 +101,11 @@ export const SideBar: React.FC = () => {
           </ul>
         </div>
 
-        <div className="h-px bg-gray-200 dark:bg-[#222] mx-4 my-4 transition-colors" />
+        <div className="h-px bg-gray-200 dark:bg-[#222] mx-4 my-4" />
 
-        {/* MY SPACE */}
+        {/* 3. MY SPACE - Особистий кабінет користувача */}
         <div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4 transition-colors">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-gray-400 dark:text-[#666] font-bold mb-2 px-4">
             {t('sidebar.mySpace')}
           </p>
           <ul className="flex flex-col gap-0.5 pb-2">

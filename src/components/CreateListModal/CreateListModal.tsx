@@ -5,24 +5,32 @@ import { createNewList } from '../../store/watchlistSlice';
 import type { ListVisibility } from '../../types/Watchlist';
 import { useTranslation } from 'react-i18next';
 
+// #region Інтерфейси
 interface CreateListModalProps {
   onClose: () => void;
 }
+// #endregion
 
 export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => {
+  // #region Хуки та Redux Диспетчер
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const user = useAppSelector((state) => state.auth.user);
+  // #endregion
 
+  // #region Локальний Стейт: Дані нового списку
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [visibility, setVisibility] = useState<ListVisibility>('Private');
+  // #endregion
 
+  // #region Обробники подій (Handlers)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !title.trim()) return;
 
+    // Створення нового списку через Redux Slice
     dispatch(createNewList({
       ownerId: user.id,
       title: title.trim(),
@@ -33,26 +41,31 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => 
 
     onClose();
   };
+  // #endregion
 
+  // #region Стилізовані константи (Tailwind Classes)
   const inputClass = "w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-600";
+  // #endregion
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/50 dark:bg-black/80 backdrop-blur-sm transition-colors duration-300">
       <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] w-full max-w-md rounded-2xl p-8 shadow-2xl relative transition-colors duration-300">
         
+        {/* Кнопка закриття */}
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 dark:text-[#8c8c8c] hover:text-gray-900 dark:hover:text-white transition-colors">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
+        {/* Заголовок модального вікна */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Create New List</h2>
           <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1 transition-colors">Organize your movies into collections</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* TITLE */}
+          {/* Поле: Назва списку */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-bold uppercase tracking-wider mb-1.5 pl-1">List Title</label>
             <input 
@@ -65,7 +78,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => 
             />
           </div>
 
-          {/* COVER URL (НОВЕ ПОЛЕ) */}
+          {/* Поле: URL Обкладинки */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-bold uppercase tracking-wider mb-1.5 pl-1">Cover Image URL (Optional)</label>
             <input 
@@ -77,7 +90,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => 
             />
           </div>
 
-          {/* DESCRIPTION */}
+          {/* Поле: Опис */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-bold uppercase tracking-wider mb-1.5 pl-1">Description (Optional)</label>
             <textarea 
@@ -89,7 +102,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => 
             />
           </div>
 
-          {/* VISIBILITY */}
+          {/* Поле: Приватність (Видимість) */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-bold uppercase tracking-wider mb-1.5 pl-1">Visibility</label>
             <select 
@@ -102,6 +115,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => 
             </select>
           </div>
 
+          {/* Кнопки керування */}
           <div className="flex gap-3 mt-4">
             <button 
               type="button" 

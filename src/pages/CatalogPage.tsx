@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MovieCard } from "../components/MovieCard/MovieCard";
-import { BulkAddToListPopover } from "../components/BulkAddToListPopover/BulkAddToListPopover"; // ПЕРЕКОНАЙСЯ ЩО СТВОРИВ ЦЕЙ ФАЙЛ
+import { BulkAddToListPopover } from "../components/BulkAddToListPopover/BulkAddToListPopover";
 import type { Movie } from "../types/Movie";
 import { fetchMovies } from "../services/api";
 
+// #region Типи та Константи
 interface TMDBMovie {
   id: number;
   title: string;
@@ -16,32 +17,42 @@ interface TMDBMovie {
 
 const GENRE_MAP: Record<string, string> = {
   "Action": "28", "Drama": "18", "Sci-Fi": "878", "Horror": "27",
-  "Thriller": "53", "Fantasy": "14", "Romance": "10749", "Western": "37", "Comedy": "35", "Documentary": "99"
+  "Thriller": "53", "Fantasy": "14", "Romance": "10749", "Western": "37", 
+  "Comedy": "35", "Documentary": "99"
 };
 
 const GENRE_FILTERS = ["Action", "Drama", "Sci-Fi", "Horror", "Thriller", "Fantasy", "Romance", "Western", "Comedy", "Documentary"];
 const ITEMS_PER_UI_PAGE = 12;
+// #endregion
 
 export const CatalogPage: React.FC = () => {
+  // #region Хуки (Навігація, Переклад, Параметри)
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+  // #endregion
+
+  // #region Стейт: Фільтрація та Пошук
   const activeGenres = searchParams.get('genres') ? searchParams.get('genres')!.split(',') : [];
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("popularity.desc");
-  
+  // #endregion
+
+  // #region Стейт: Дані та Пагінація
   const [loadedMovies, setLoadedMovies] = useState<Movie[]>([]);
   const [uiPage, setUiPage] = useState(1);
   const [tmdbPage, setTmdbPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreTMDB, setHasMoreTMDB] = useState(true);
+  // #endregion
 
-  // СТЕЙТ ДЛЯ МАСОВОГО ВИДІЛЕННЯ
+  // #region Стейт: Масове Виділення (Bulk Selection)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [isBulkPopoverOpen, setIsBulkPopoverOpen] = useState(false); // СТЕЙТ ДЛЯ ПОПОВЕРА
+  const [isBulkPopoverOpen, setIsBulkPopoverOpen] = useState(false);
+  // #endregion
 
+  // #region Константи для Рендеру (Options)
   const SORT_OPTIONS = [
     { label: t('catalog.sort.popularity'), value: "popularity.desc" },
     { label: t('catalog.sort.ratingDesc'), value: "vote_average.desc" },
@@ -55,26 +66,12 @@ export const CatalogPage: React.FC = () => {
     { to: "/catalog/topRated",    label: t('catalog.topRated') },
     { to: "/catalog/newReleases", label: t('catalog.newReleases') },
   ];
+  // #endregion
 
-  const toggleSelection = (id: number) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
-  const cancelSelection = () => {
-    setIsSelectionMode(false);
-    setSelectedIds([]);
-    setIsBulkPopoverOpen(false);
-  };
-
-  // Функція для отримання масиву вибраних об'єктів фільмів
-  const getSelectedMoviesObjects = () => {
-    return loadedMovies.filter(m => selectedIds.includes(m.id));
-  };
-
+  // #region Логіка завантаження даних (API)
   const fetchBatch = async (pageToFetch: number) => {
     let endpoint = `/discover/movie?sort_by=${sortBy}&vote_count.gte=100`;
+    
     if (location.pathname.includes('topRated')) {
       endpoint = `/discover/movie?sort_by=vote_average.desc&vote_count.gte=1000`;
     } else if (location.pathname.includes('newReleases')) {
@@ -88,23 +85,50 @@ export const CatalogPage: React.FC = () => {
     }
 
     const { results, totalPages } = await fetchMovies(endpoint, pageToFetch);
+    
     const formatted: Movie[] = results.map((m: TMDBMovie) => ({
-      id: m.id, title: m.title, year: m.release_date ? new Date(m.release_date).getFullYear() : 0,
-      genre: activeGenres.length > 0 ? activeGenres[0] : "Movie", rating: m.vote_average,
+      id: m.id,
+      title: m.title,
+      year: m.release_date ? new Date(m.release_date).getFullYear() : 0,
+      genre: activeGenres.length > 0 ? activeGenres[0] : "Movie",
+      rating: m.vote_average,
       posterUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : undefined
     }));
+    
     return { formatted, totalPages };
   };
 
   useEffect(() => {
     const loadInitial = async () => {
-      setIsLoading(true); setUiPage(1); setTmdbPage(1);
+      setIsLoading(true);
+      setUiPage(1);
+      setTmdbPage(1);
       const { formatted, totalPages } = await fetchBatch(1);
-      setLoadedMovies(formatted); setHasMoreTMDB(totalPages > 1); setIsLoading(false);
+      setLoadedMovies(formatted);
+      setHasMoreTMDB(totalPages > 1);
+      setIsLoading(false);
     };
     const timer = setTimeout(() => loadInitial(), 400);
     return () => clearTimeout(timer);
   }, [searchParams, search, sortBy, location.pathname, i18n.language]);
+  // #endregion
+
+  // #region Обробники подій (Handlers)
+  const toggleSelection = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const cancelSelection = () => {
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+    setIsBulkPopoverOpen(false);
+  };
+
+  const getSelectedMoviesObjects = () => {
+    return loadedMovies.filter(m => selectedIds.includes(m.id));
+  };
 
   const toggleGenre = (genre: string) => {
     const newGenres = activeGenres.includes(genre) ? activeGenres.filter(g => g !== genre) : [...activeGenres, genre];
@@ -124,9 +148,12 @@ export const CatalogPage: React.FC = () => {
     }
     setUiPage(nextUiPage);
   };
+  // #endregion
 
+  // #region Допоміжні розрахунки для рендеру
   const startIndex = (uiPage - 1) * ITEMS_PER_UI_PAGE;
   const displayMovies = loadedMovies.slice(startIndex, startIndex + ITEMS_PER_UI_PAGE);
+  // #endregion
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50 dark:bg-[#111] overflow-hidden transition-colors relative">
@@ -193,18 +220,16 @@ export const CatalogPage: React.FC = () => {
         )}
       </div>
 
-      {/* FLOATING ACTION BAR */}
       {isSelectionMode && selectedIds.length > 0 && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-white dark:bg-[#1c1c1c] border border-gray-200 dark:border-[#2a2a2a] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 backdrop-blur-xl relative">
             
-            {/* BULK POPOVER - ВІДКРИВАЄТЬСЯ НАД БАРОМ */}
             {isBulkPopoverOpen && (
               <BulkAddToListPopover 
                 movies={getSelectedMoviesObjects()} 
                 onClose={() => {
                   setIsBulkPopoverOpen(false);
-                  cancelSelection(); // Закриваємо режим вибору після успішного додавання
+                  cancelSelection();
                 }} 
               />
             )}

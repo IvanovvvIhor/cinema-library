@@ -3,24 +3,34 @@ import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { updateUserProfile } from '../../store/authSlice';
 import type { Gender } from '../../types/User';
 
+// #region Інтерфейси
 interface EditProfileModalProps {
   onClose: () => void;
 }
+// #endregion
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) => {
+  // #region Хуки та Redux Диспетчер
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  // #endregion
 
+  // #region Локальний Стейт: Форма редагування
   const [username, setUsername] = useState(user?.username || '');
   const [age, setAge] = useState<number | ''>(user?.age || '');
   const [gender, setGender] = useState<Gender>(user?.gender || 'Male');
   const [avatar, setAvatar] = useState(user?.avatar || '');
+  // #endregion
 
+  // #region Перевірка авторизації (Ранній вихід)
   if (!user) return null;
+  // #endregion
 
+  // #region Обробники подій (Handlers)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Оновлення даних профілю в глобальному сторі
     dispatch(updateUserProfile({
       username,
       age: Number(age),
@@ -30,15 +40,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
 
     onClose();
   };
+  // #endregion
 
-  // Базовий клас для інпутів, як в AuthModal
+  // #region Стилізовані константи (Tailwind Classes)
+  // Базовий клас для полів вводу, забезпечує консистентність з AuthModal
   const inputBaseClass = "w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-500";
+  // #endregion
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm transition-colors duration-300">
       <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] w-full max-w-md rounded-2xl p-8 shadow-2xl relative transition-colors duration-300">
         
-        {/* Кнопка закриття (Хрестик) */}
+        {/* Кнопка закриття модального вікна */}
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 dark:text-[#8c8c8c] hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -48,6 +61,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
           </svg>
         </button>
 
+        {/* Заголовок модалки */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Edit Profile</h2>
           <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1 transition-colors duration-300">Update your personal information</p>
@@ -55,6 +69,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
+          {/* Поле Username */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Username</label>
             <input 
@@ -66,6 +81,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
             />
           </div>
 
+          {/* Поля Age та Gender (в один ряд) */}
           <div className="flex gap-4">
             <div className="w-1/3">
               <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Age</label>
@@ -92,6 +108,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
             </div>
           </div>
 
+          {/* Поле Avatar URL */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Avatar URL</label>
             <input 
@@ -106,6 +123,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
             )}
           </div>
 
+          {/* Поле Email (тільки для читання) */}
           <div>
             <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Email (Read Only)</label>
             <input 
@@ -116,6 +134,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
             />
           </div>
 
+          {/* Кнопки керування формою */}
           <div className="flex gap-3 mt-4">
             <button 
               type="button" 

@@ -5,6 +5,7 @@ import { useAppSelector } from "../store/hooks";
 import { AddToListPopover } from "../components/AddToListPopover/AddToListPopover";
 import { useTranslation } from "react-i18next";
 
+// #region Типи та Інтерфейси
 interface Genre {
   id: number;
   name: string;
@@ -58,38 +59,51 @@ interface ExtendedMovieDetails {
     results: Video[];
   };
 }
+// #endregion
 
 export const MovieDetailsPage: React.FC = () => {
+  // #region Хуки та Параметри
   const { id } = useParams<{ id: string }>();
+  const user = useAppSelector((state) => state.auth.user);
+  const { t, i18n } = useTranslation();
+  // #endregion
+
+  // #region Стейт: Дані фільму та інтерфейс
   const [movie, setMovie] = useState<ExtendedMovieDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
-  
+  // #endregion
+
+  // #region Стейт: Рецензії та форми
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReviewText, setNewReviewText] = useState("");
   const [reviewError, setReviewError] = useState("");
+  // #endregion
 
-  const user = useAppSelector((state) => state.auth.user);
-  const { t, i18n } = useTranslation();
-
+  // #region Ефекти: Завантаження даних
   useEffect(() => {
     const loadMovieAndReviews = async () => {
       setIsLoading(true);
       if (id) {
+        // Отримання деталей фільму через API
         const data = await fetchMovieDetails(id);
         setMovie(data);
 
+        // Отримання рецензій з локального сховища
         const allReviews: Review[] = JSON.parse(localStorage.getItem('cinema_reviews_db') || '[]');
-        const movieReviews = allReviews.filter(r => r.movieId === id).sort((a, b) => b.date - a.date);
+        const movieReviews = allReviews
+          .filter(r => r.movieId === id)
+          .sort((a, b) => b.date - a.date);
         setReviews(movieReviews);
       }
       setIsLoading(false);
     };
     loadMovieAndReviews();
   }, [id, i18n.language]);
+  // #endregion
 
+  // #region Обробники: Керування рецензіями
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !id || !movie) return;
@@ -123,7 +137,9 @@ export const MovieDetailsPage: React.FC = () => {
     setNewReviewText("");
     setReviewError("");
   };
+  // #endregion
 
+  // #region Обробники: Система голосування
   const handleVote = (reviewId: string, type: 'like' | 'dislike') => {
     if (!user) {
       alert(t('movieDetails.loginToReview') || "You must be logged in to vote.");
@@ -134,10 +150,8 @@ export const MovieDetailsPage: React.FC = () => {
     
     const updatedReviews = allReviews.map(r => {
       if (r.id === reviewId) {
-        // Блокуємо можливість голосувати за власну рецензію
-        if (r.userId === user.id) {
-          return r;
-        }
+        // Користувач не може голосувати за власну рецензію
+        if (r.userId === user.id) return r;
 
         let { likedBy, dislikedBy } = r;
         likedBy = likedBy || [];
@@ -148,17 +162,17 @@ export const MovieDetailsPage: React.FC = () => {
 
         if (type === 'like') {
           if (hasLiked) {
-            likedBy = likedBy.filter(id => id !== user.id); 
+            likedBy = likedBy.filter(userId => userId !== user.id); 
           } else {
             likedBy.push(user.id); 
-            dislikedBy = dislikedBy.filter(id => id !== user.id); 
+            dislikedBy = dislikedBy.filter(userId => userId !== user.id); 
           }
         } else if (type === 'dislike') {
           if (hasDisliked) {
-            dislikedBy = dislikedBy.filter(id => id !== user.id); 
+            dislikedBy = dislikedBy.filter(userId => userId !== user.id); 
           } else {
             dislikedBy.push(user.id); 
-            likedBy = likedBy.filter(id => id !== user.id); 
+            likedBy = likedBy.filter(userId => userId !== user.id); 
           }
         }
 
@@ -176,10 +190,21 @@ export const MovieDetailsPage: React.FC = () => {
     localStorage.setItem('cinema_reviews_db', JSON.stringify(updatedReviews));
     setReviews(updatedReviews.filter(r => r.movieId === id).sort((a, b) => b.date - a.date));
   };
+  // #endregion
 
-  if (isLoading) return <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen transition-colors duration-300"><div className="w-10 h-10 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div></div>;
+  // #region Форматування та Фолбеки (Fallback)
+  if (isLoading) return (
+    <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen transition-colors duration-300">
+      <div className="w-10 h-10 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
-  if (!movie) return <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen text-gray-900 dark:text-white transition-colors duration-300"><h2 className="text-2xl font-bold mb-4">{t('movieDetails.notFound') || "Movie not found"}</h2><Link to="/catalog" className="text-[#e50914] hover:underline">← {t('movieDetails.backToCatalog') || "Back to catalog"}</Link></div>;
+  if (!movie) return (
+    <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen text-gray-900 dark:text-white transition-colors duration-300">
+      <h2 className="text-2xl font-bold mb-4">{t('movieDetails.notFound')}</h2>
+      <Link to="/catalog" className="text-[#e50914] hover:underline">← {t('movieDetails.backToCatalog')}</Link>
+    </div>
+  );
 
   const backdropUrl = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : '';
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined;
@@ -188,10 +213,12 @@ export const MovieDetailsPage: React.FC = () => {
   const minutes = movie.runtime % 60;
 
   const trailer = movie.videos?.results.find(vid => vid.site === "YouTube" && vid.type === "Trailer") || movie.videos?.results.find(vid => vid.site === "YouTube");
+  // #endregion
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] overflow-y-auto transition-colors duration-300 relative">
       
+      {/* Модальне вікно трейлера */}
       {isTrailerOpen && trailer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
           <div className="relative w-full max-w-5xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-[#2a2a2a]">
@@ -201,7 +228,7 @@ export const MovieDetailsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. MOVIE BANNER */}
+      {/* Головний банер фільму */}
       <section className="relative w-full h-[70vh] min-h-[500px] flex items-end pb-16 px-12 transition-colors duration-300">
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 dark:opacity-40 transition-opacity duration-300" style={{ backgroundImage: `url(${backdropUrl})` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-gray-50/80 dark:from-[#111] dark:via-[#111]/80 to-transparent transition-colors duration-300" />
@@ -221,11 +248,11 @@ export const MovieDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-gray-600 dark:text-gray-400 text-base max-w-3xl leading-relaxed mt-2 transition-colors duration-300">{movie.overview || (t('movieDetails.noOverview') || "Опис відсутній.")}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-base max-w-3xl leading-relaxed mt-2 transition-colors duration-300">{movie.overview || t('movieDetails.noOverview')}</p>
 
             <div className="flex gap-4 mt-4">
               <button 
-                onClick={() => trailer ? setIsTrailerOpen(true) : alert(t('movieDetails.noTrailer') || 'Трейлер не знайдено')}
+                onClick={() => trailer ? setIsTrailerOpen(true) : alert(t('movieDetails.noTrailer'))}
                 className={`px-8 py-3 font-bold rounded-xl transition shadow-lg ${trailer ? "bg-[#e50914] text-white hover:bg-red-600 shadow-red-600/20" : "bg-gray-300 dark:bg-[#2a2a2a] text-gray-500 dark:text-[#666] cursor-not-allowed"}`}
                 disabled={!trailer}
               >
@@ -243,7 +270,7 @@ export const MovieDetailsPage: React.FC = () => {
                 </div>
               ) : (
                 <Link to="/" className="flex items-center px-8 py-3 bg-gray-200/80 dark:bg-white/10 text-gray-900 dark:text-white font-bold rounded-xl hover:bg-gray-300/80 dark:hover:bg-white/20 transition backdrop-blur-md">
-                  {t('movieDetails.signInToSave') || "Sign In to Save"}
+                  {t('movieDetails.signInToSave')}
                 </Link>
               )}
             </div>
@@ -251,9 +278,9 @@ export const MovieDetailsPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. CAST & CREW */}
+      {/* Секція акторського складу */}
       <section className="px-12 py-10 max-w-6xl">
-        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.topCast') || "Top Cast"}</h2>
+        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.topCast')}</h2>
         <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
           {movie.credits?.cast?.slice(0, 8).map((actor: CastMember) => (
             <div key={actor.id} className="min-w-[120px] flex flex-col gap-2">
@@ -269,9 +296,9 @@ export const MovieDetailsPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. REVIEWS SECTION */}
+      {/* Секція відгуків */}
       <section className="px-12 py-10 max-w-6xl mb-12">
-        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.reviews') || "User Reviews"}</h2>
+        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.reviews')}</h2>
 
         {user ? (
           <form onSubmit={handleReviewSubmit} className="mb-10 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-6 rounded-2xl transition-colors duration-300">
@@ -282,30 +309,29 @@ export const MovieDetailsPage: React.FC = () => {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#e50914] to-orange-500 flex items-center justify-center text-white text-sm font-bold shrink-0">{user.username.substring(0, 2).toUpperCase()}</div>
               )}
               <div className="flex-1">
-                <textarea value={newReviewText} onChange={(e) => { setNewReviewText(e.target.value); setReviewError(""); }} placeholder={t('movieDetails.writeReview') || "Write your review... (feel free to use emojis 🍿)"} className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none min-h-[100px]" />
+                <textarea value={newReviewText} onChange={(e) => { setNewReviewText(e.target.value); setReviewError(""); }} placeholder={t('movieDetails.writeReview')} className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none min-h-[100px]" />
                 {reviewError && <p className="text-[#e50914] text-xs mt-2 font-medium">{reviewError}</p>}
               </div>
             </div>
             <div className="flex justify-end">
-              <button type="submit" className="px-6 py-2.5 bg-[#e50914] text-white text-sm font-bold rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newReviewText.trim()}>{t('movieDetails.publishReview') || "Publish"}</button>
+              <button type="submit" className="px-6 py-2.5 bg-[#e50914] text-white text-sm font-bold rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newReviewText.trim()}>{t('movieDetails.publishReview')}</button>
             </div>
           </form>
         ) : (
           <div className="mb-10 bg-gray-100 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-6 rounded-2xl flex flex-col items-center justify-center text-center transition-colors duration-300">
-            <p className="text-gray-600 dark:text-[#8c8c8c] text-sm mb-3">{t('movieDetails.loginToReview') || "You must be logged in to leave a review."}</p>
+            <p className="text-gray-600 dark:text-[#8c8c8c] text-sm mb-3">{t('movieDetails.loginToReview')}</p>
             <Link to="/" className="px-6 py-2 bg-gray-200 dark:bg-[#2a2a2a] text-gray-900 dark:text-white font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-[#333] transition-colors text-sm">Sign In</Link>
           </div>
         )}
 
-        {/* Список відгуків з голосуванням */}
         <div className="flex flex-col gap-4">
           {reviews.length === 0 ? (
-            <p className="text-gray-500 dark:text-[#666] text-sm italic transition-colors">{t('movieDetails.noReviewsYet') || "No reviews yet. Be the first to share your thoughts!"}</p>
+            <p className="text-gray-500 dark:text-[#666] text-sm italic transition-colors">{t('movieDetails.noReviewsYet')}</p>
           ) : (
             reviews.map((review) => {
               const hasLiked = user && (review.likedBy || []).includes(user.id);
               const hasDisliked = user && (review.dislikedBy || []).includes(user.id);
-              const isOwnReview = user?.id === review.userId; // Перевірка чи це своя рецензія
+              const isOwnReview = user?.id === review.userId;
 
               return (
                 <div key={review.id} className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-5 rounded-2xl flex gap-4 transition-colors duration-300">
@@ -321,12 +347,11 @@ export const MovieDetailsPage: React.FC = () => {
                     </div>
                     <p className="text-gray-700 dark:text-[#ccc] text-sm leading-relaxed whitespace-pre-wrap transition-colors mb-4">{review.text}</p>
                     
-                    {/* КНОПКИ ГОЛОСУВАННЯ */}
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => handleVote(review.id, 'like')}
-                        disabled={isOwnReview} // Блокуємо кнопку, якщо це своя рецензія
-                        title={isOwnReview ? "You cannot vote on your own review" : "Like this review"}
+                        disabled={isOwnReview}
+                        title={isOwnReview ? "You cannot vote on your own review" : "Like"}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
                           hasLiked 
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-500 border border-green-200 dark:border-green-800' 
@@ -341,8 +366,8 @@ export const MovieDetailsPage: React.FC = () => {
 
                       <button 
                         onClick={() => handleVote(review.id, 'dislike')}
-                        disabled={isOwnReview} // Блокуємо кнопку, якщо це своя рецензія
-                        title={isOwnReview ? "You cannot vote on your own review" : "Dislike this review"}
+                        disabled={isOwnReview}
+                        title={isOwnReview ? "You cannot vote on your own review" : "Dislike"}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
                           hasDisliked 
                             ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-500 border border-red-200 dark:border-red-800' 
@@ -355,7 +380,6 @@ export const MovieDetailsPage: React.FC = () => {
                         {review.dislikes || 0}
                       </button>
                     </div>
-
                   </div>
                 </div>
               );

@@ -5,22 +5,30 @@ import { fetchMovieDetails } from '../../services/api';
 import type { Movie } from '../../types/Movie';
 import type { WatchlistMovie } from '../../types/Watchlist';
 
+// #region Інтерфейси
 interface AddToListPopoverProps {
   movie: Movie;
   onClose: () => void;
 }
+// #endregion
 
 export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClose }) => {
+  // #region Хуки та Redux Диспетчер
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const userLists = useAppSelector((state) => selectUserLists(state, user?.id));
-  
-  const [loadingListId, setLoadingListId] = useState<string | null>(null);
+  // #endregion
 
+  // #region Локальний Стейт
+  const [loadingListId, setLoadingListId] = useState<string | null>(null);
+  // #endregion
+
+  // #region Обробники подій (Handlers)
   const handleAdd = async (listId: string) => {
     setLoadingListId(listId);
 
     try {
+      // Отримуємо розширені деталі фільму (runtime, жанри) перед додаванням у список
       const details = await fetchMovieDetails(movie.id.toString());
 
       const movieForList: WatchlistMovie = {
@@ -34,6 +42,7 @@ export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClo
         addedAt: Date.now(),
       };
 
+      // Додаємо фільм у конкретний список у Redux сторі
       dispatch(addMovieToList({ listId, movie: movieForList }));
     } catch (error) {
       console.error("Failed to add movie", error);
@@ -42,11 +51,17 @@ export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClo
       onClose();
     }
   };
+  // #endregion
 
   return (
     <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl shadow-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 py-2 overflow-hidden animate-in fade-in origin-top-left transition-colors duration-300">
-      <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-gray-500 dark:text-[#666] font-bold transition-colors duration-300">Add to list</p>
       
+      {/* Заголовок секції */}
+      <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-gray-500 dark:text-[#666] font-bold transition-colors duration-300">
+        Add to list
+      </p>
+      
+      {/* Список колекцій користувача */}
       <div className="flex flex-col max-h-48 overflow-y-auto custom-scrollbar">
         {userLists.map((list) => {
           const isMovieInList = list.movies.some(m => m.id === movie.id);
@@ -68,6 +83,7 @@ export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClo
             >
               <span className="truncate pr-2">{list.title}</span>
               
+              {/* Індикація завантаження або наявності фільму в списку */}
               {loadingListId === list.id && (
                 <div className="w-3 h-3 border-2 border-red-600 dark:border-white border-t-transparent rounded-full animate-spin shrink-0" />
               )}
@@ -81,6 +97,7 @@ export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClo
         })}
       </div>
 
+      {/* Футер поповера - швидке створення списку */}
       <div className="border-t border-gray-100 dark:border-[#222] mt-1 pt-1 transition-colors duration-300">
         <button 
           onClick={(e) => {
@@ -93,6 +110,7 @@ export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClo
           + New List
         </button>
       </div>
+
     </div>
   );
 };

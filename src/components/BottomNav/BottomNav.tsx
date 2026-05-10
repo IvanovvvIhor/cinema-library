@@ -4,22 +4,29 @@ import { useTranslation } from "react-i18next";
 import { useAppSelector } from "../../store/hooks";
 
 export const BottomNav: React.FC = () => {
+  // #region Хуки та Навігація
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const user = useAppSelector((state) => state.auth.user);
+  // #endregion
 
-  // Класи для іконок з підтримкою теми
+  // #region Селектори Redux
+  const user = useAppSelector((state) => state.auth.user);
+  // #endregion
+
+  // #region Допоміжні методи стилізації (Helper Methods)
+  // Функція для динамічної зміни класів іконок залежно від активного маршруту
   const getIconClass = ({ isActive }: { isActive: boolean }) =>
     `flex flex-col items-center justify-center gap-1 w-14 transition-all duration-300 ${
       isActive 
         ? "text-[#e50914] scale-110" 
         : "text-gray-500 dark:text-[#8c8c8c] hover:text-gray-900 dark:hover:text-gray-300"
     }`;
+  // #endregion
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#111]/95 backdrop-blur-lg border-t border-gray-200 dark:border-[#222] px-4 pb-safe flex justify-between items-center h-[70px] z-50 transition-colors duration-300">
       
-      {/* 1. Home */}
+      {/* 1. Home - Перехід до головного каталогу */}
       <NavLink to="/catalog" className={getIconClass} end>
         {({ isActive }) => (
           <>
@@ -31,7 +38,7 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 2. Top Rated (Замість загального Search, бо Search вже є в каталозі) */}
+      {/* 2. Top Rated - Рейтингові фільми */}
       <NavLink to="/catalog/topRated" className={getIconClass}>
         {({ isActive }) => (
           <>
@@ -43,7 +50,7 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 3. Центральна кнопка дії (Відкриває налаштування або створення списку) */}
+      {/* 3. Центральна кнопка дії - Швидкий доступ до налаштувань */}
       <div className="relative -top-4">
         <button 
           onClick={() => navigate('/settings')}
@@ -55,7 +62,7 @@ export const BottomNav: React.FC = () => {
         </button>
       </div>
 
-      {/* 4. Watchlist */}
+      {/* 4. Watchlist - Список обраного */}
       <NavLink to="/WatchList" className={getIconClass}>
         {({ isActive }) => (
           <>
@@ -67,7 +74,7 @@ export const BottomNav: React.FC = () => {
         )}
       </NavLink>
 
-      {/* 5. Profile / Settings */}
+      {/* 5. Profile / Settings - Особистий кабінет або вхід */}
       <NavLink to={user ? "/profile" : "/settings"} className={getIconClass}>
         {({ isActive }) => (
           <>

@@ -7,6 +7,7 @@ import { fetchMovies } from "../services/api";
 import { AuthModal } from "../components/AuthModal/AuthModal";
 import { useAppSelector } from "../store/hooks";
 
+// #region Типи та Інтерфейси
 interface TMDBMovie {
   id: number;
   title: string;
@@ -14,20 +15,27 @@ interface TMDBMovie {
   vote_average: number;
   poster_path: string | null;
 }
+// #endregion
 
 export const HomePage: React.FC = () => {
+  // #region Стейт та Селектори
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   const user = useAppSelector((state) => state.auth.user);
   const isGuest = useAppSelector((state) => state.auth.isGuest);
+  // #endregion
 
+  // #region Effects (Побічні ефекти)
+  
+  // Керування модальним вікном авторизації
   useEffect(() => {
     const modal = !user && !isGuest;
     setShowAuthModal(modal);
   }, [user, isGuest]);
 
+  // Завантаження трендових фільмів
   useEffect(() => {
     const loadTrendingMovies = async () => {
       setIsLoading(true);
@@ -48,16 +56,13 @@ export const HomePage: React.FC = () => {
 
     loadTrendingMovies();
   }, []);
+  // #endregion
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] overflow-y-auto transition-colors duration-300">
       
-      {/* AUTH MODAL */}
-      {showAuthModal && (
-        <AuthModal onClose={() => setShowAuthModal(false)} />
-      )}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
-      {/* HERO SECTION */}
       <section className="relative px-8 py-16 flex flex-col gap-4 overflow-hidden border-b border-gray-200 dark:border-[#222] transition-colors duration-300">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 dark:from-red-950/30 via-transparent to-transparent pointer-events-none transition-colors duration-300" />
         <div className="relative">
@@ -72,25 +77,16 @@ export const HomePage: React.FC = () => {
             Discover, rate, and catalog films. Build watchlists, track your reviews, and earn badges as you explore cinema.
           </p>
           <div className="flex items-center gap-3">
-            <Link
-              to="/catalog"
-              className="px-6 py-3 bg-[#e50914] text-white text-sm font-semibold rounded-xl transition hover:bg-red-600 shadow-lg shadow-red-600/20"
-            >
+            <Link to="/catalog" className="px-6 py-3 bg-[#e50914] text-white text-sm font-semibold rounded-xl transition hover:bg-red-600 shadow-lg shadow-red-600/20">
               Browse Catalog
             </Link>
             
             {user ? (
-              <Link
-                to="/WatchList"
-                className="px-6 py-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] text-gray-700 dark:text-[#8c8c8c] text-sm font-semibold rounded-xl transition hover:border-gray-300 dark:hover:border-[#444] hover:text-gray-900 dark:hover:text-white shadow-sm"
-              >
+              <Link to="/WatchList" className="px-6 py-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] text-gray-700 dark:text-[#8c8c8c] text-sm font-semibold rounded-xl transition hover:border-gray-300 dark:hover:border-[#444] hover:text-gray-900 dark:hover:text-white shadow-sm">
                 My Watchlist
               </Link>
             ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-6 py-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] text-gray-700 dark:text-[#8c8c8c] text-sm font-semibold rounded-xl transition hover:border-gray-300 dark:hover:border-[#444] hover:text-gray-900 dark:hover:text-white shadow-sm"
-              >
+              <button onClick={() => setShowAuthModal(true)} className="px-6 py-3 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] text-gray-700 dark:text-[#8c8c8c] text-sm font-semibold rounded-xl transition hover:border-gray-300 dark:hover:border-[#444] hover:text-gray-900 dark:hover:text-white shadow-sm">
                 Sign In to Save
               </button>
             )}
@@ -98,14 +94,10 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* TRENDING NOW SECTION */}
       <section className="px-8 py-12">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-gray-900 dark:text-white text-lg font-bold transition-colors duration-300">Trending Now</h2>
-          <Link
-            to="/catalog"
-            className="text-gray-500 dark:text-[#8c8c8c] text-sm font-medium transition hover:text-gray-900 dark:hover:text-white"
-          >
+          <Link to="/catalog" className="text-gray-500 dark:text-[#8c8c8c] text-sm font-medium transition hover:text-gray-900 dark:hover:text-white">
             See all →
           </Link>
         </div>

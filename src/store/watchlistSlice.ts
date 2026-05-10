@@ -138,12 +138,11 @@ const watchlistSlice = createSlice({
   },
 });
 
-// ТУТ БУЛА ПОМИЛКА: додаємо addMoviesToList в експорт екшенів
 export const { 
   initializeUserLists, 
   createNewList, 
   addMovieToList, 
-  addMoviesToList, // <--- ТЕПЕР ВІН ТУТ Є
+  addMoviesToList,
   removeMovieFromList,
   removeMoviesFromList,
   updateListCover 

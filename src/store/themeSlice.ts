@@ -6,7 +6,6 @@ const getInitialTheme = (): ThemeMode => {
   const savedTheme = localStorage.getItem('cinema_theme') as ThemeMode;
   if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
   
-  // Твоя вимога: стартова тема ЗАВЖДИ світла, якщо юзер ще нічого не обрав
   return 'light'; 
 };
 
