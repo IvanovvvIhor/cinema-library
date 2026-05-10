@@ -6,9 +6,8 @@
 Головна особливість проєкту — інтеграція з всесвітньою базою даних фільмів через API та унікальний UI/UX дизайн з акцентом на візуальний досвід.
 
 ## 🛠 Стек технологій
-[cite_start]Проєкт побудований на сучасному Full Stack стеку:
+Проєкт побудований на сучасному Full Stack стеку:
 * **Frontend:** React + Vite + TypeScript.
-* **Backend as a Service:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, RLS).
 * **API:** [The Movie Database (TMDB)](https://www.themoviedb.org/) для отримання актуальних даних про фільми.
 * **Design:** Figma (індивідуальний стиль "Gothic Dark" та "Ivory Light").
 
