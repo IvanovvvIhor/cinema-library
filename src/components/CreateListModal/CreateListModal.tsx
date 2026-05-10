@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { createNewList } from '../../store/watchlistSlice';
 import type { ListVisibility } from '../../types/Watchlist';
-import { useTranslation } from 'react-i18next';
 
 // #region Інтерфейси
 interface CreateListModalProps {
@@ -14,7 +13,6 @@ interface CreateListModalProps {
 export const CreateListModal: React.FC<CreateListModalProps> = ({ onClose }) => {
   // #region Хуки та Redux Диспетчер
   const dispatch = useAppDispatch();
-  const { t } = useTranslation();
   const user = useAppSelector((state) => state.auth.user);
   // #endregion
 

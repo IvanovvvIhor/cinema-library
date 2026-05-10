@@ -145,7 +145,9 @@ export const WatchlistDetailPage: React.FC = () => {
                   <div className="w-8 text-center text-gray-500 dark:text-[#666] font-medium text-sm group-hover:text-gray-900 dark:group-hover:text-white">{index + 1}</div>
                   <div className="flex-1 flex items-center gap-4 min-w-0">
                     <Link to={`/movie/${movie.id}`} className="shrink-0">
-                      <img src={movie.posterUrl} alt={movie.title} className="w-10 h-14 object-cover rounded-md shadow-md" />
+                      {typeof movie.posterUrl === 'string'? (
+                        <img src={movie.posterUrl} alt={movie.title} className="w-10 h-14 object-cover rounded-md shadow-md" />
+                      ) : null }
                     </Link>
                     <div className="flex flex-col min-w-0">
                       <Link to={`/movie/${movie.id}`} className="text-gray-900 dark:text-white text-sm font-bold truncate hover:underline underline-offset-2">{movie.title}</Link>
