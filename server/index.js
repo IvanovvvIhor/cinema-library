@@ -468,4 +468,28 @@ app.get('/api/movies/:id', async (req, res) => {
     }
 });
 
+// Універсальний проксі для фільмів
+app.get('/api/movies/proxy', async (req, res) => {
+    try {
+        const { endpoint, ...params } = req.query; 
+        
+        if (!endpoint) return res.status(400).json({ error: 'Endpoint required' });
+
+        const response = await axios.get(`https://api.themoviedb.org/3${endpoint}`, {
+            headers: {
+                Authorization: `Bearer ${process.env.TMDB_TOKEN}`,
+                accept: 'application/json'
+            },
+            params: {
+                ...params, 
+                language: params.language || 'uk-UA'
+            }
+        });
+        res.json(response.data);
+    } catch (error) {
+        console.error('[TMDB PROXY ERROR]', error.message);
+        res.status(500).json({ error: 'TMDB Liaison failed' });
+    }
+});
+
 app.listen(PORT, () => console.log(`🚀 Reactor running on ${PORT}`));
