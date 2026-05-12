@@ -25,6 +25,12 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+});
+
 app.use(cookieParser());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
