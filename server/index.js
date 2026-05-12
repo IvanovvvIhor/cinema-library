@@ -7,6 +7,7 @@ const WebSocket = require('ws');
 const cookieParser = require('cookie-parser');
 const { checkAchievements } = require('./achievementsEngine');
 require('dotenv').config();
+const axios = require('axios');
 
 
 const { hashPassword, comparePasswords } = require('./utils/passwordUtils');
@@ -73,6 +74,24 @@ const awardXP = async (userId, amount) => {
 
 app.get('/', (req, res) => {
     res.send('Атлант на зв’язку! Система прогресії активована.');
+});
+
+app.get('/api/movies/trending', async (req, res) => {
+    try {
+        const response = await axios.get('https://api.themoviedb.org/3/movie/popular', {
+            headers: {
+                Authorization: `Bearer ${process.env.TMDB_TOKEN}`,
+                accept: 'application/json'
+            },
+            params: {
+                language: 'uk-UA', // Або бери з req.query
+                page: req.query.page || 1
+            }
+        });
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: 'TMDB Liaison failed' });
+    }
 });
 
 // #region АВТЕНТИФІКАЦІЯ
