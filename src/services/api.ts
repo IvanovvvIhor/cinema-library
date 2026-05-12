@@ -7,12 +7,13 @@ const getTMDBLanguage = () => {
 };
 
 
-export const fetchMovies = async (_endpoint: string, page: number = 1) => {
+export const fetchMovies = async (endpoint: string, page: number = 1) => {
   try {
     const lang = getTMDBLanguage();
-    // Стукаємо на наш проксі-ендпоінт на Render
-    const response = await api.get('/movies/trending', { 
+    
+    const response = await api.get('/movies/proxy', { 
       params: { 
+        endpoint,
         page,
         language: lang 
       } 
