@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: 'http://localhost:5000/api', // Базова адреса твого бекенду
-    withCredentials: true, // ОБОВ'ЯЗКОВО: щоб браузер передавав куки (токен)
+    baseURL: 'https://cinema-library.onrender.com',
+    withCredentials: true,
 });
 
 export default instance;
