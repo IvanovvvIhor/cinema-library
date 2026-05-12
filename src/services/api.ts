@@ -1,44 +1,45 @@
-import i18n from '../i18n'; // Імпортуємо наш конфіг i18n
-import api from '../api/axios';
-
-const BASE_URL = 'https://api.themoviedb.org/3';
-const TOKEN = import.meta.env.VITE_TMDB_READ_ACCESS_TOKEN;
-
-const options = {
-  method: 'GET',
-  headers: {
-    accept: 'application/json',
-    Authorization: `Bearer ${TOKEN}`
-  }
-};
+import i18n from '../i18n';
+import api from '../api/axios'; // Твій налаштований axios, що веде на Render
 
 const getTMDBLanguage = () => {
   const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
   return currentLang === 'uk' ? 'uk-UA' : 'en-US';
 };
 
-export const fetchMovies = async (endpoint: string, page: number = 1) => {
+// Використовуємо _endpoint, щоб TS не сварився на невикористану змінну
+export const fetchMovies = async (_endpoint: string, page: number = 1) => {
   try {
-
-    const response = await api.get('/movies/trending', { params: { page } });
-    return { results: response.data.results, totalPages: response.data.total_pages };
+    const lang = getTMDBLanguage();
+    // Стукаємо на наш проксі-ендпоінт на Render
+    const response = await api.get('/movies/trending', { 
+      params: { 
+        page,
+        language: lang 
+      } 
+    });
+    
+    return { 
+      results: response.data.results, 
+      totalPages: response.data.total_pages 
+    };
   } catch (error) {
-    console.error("Помилка проксі-запиту:", error);
+    console.error("Помилка проксі-завантаження списку:", error);
     return { results: [], totalPages: 0 };
   }
 };
 
 export const fetchMovieDetails = async (id: string) => {
   try {
-    const lang = getTMDBLanguage(); 
+    const lang = getTMDBLanguage();
+    // Тепер деталі теж тягнемо через наш бекенд
+    // Тобі треба буде додати цей маршрут на Render (app.get('/api/movies/:id', ...))
+    const response = await api.get(`/movies/${id}`, {
+      params: { language: lang }
+    });
     
-
-    const response = await fetch(`${BASE_URL}/movie/${id}?language=${lang}&append_to_response=credits,videos`, options);
-    
-    if (!response.ok) throw new Error('Failed to fetch movie details');
-    return await response.json();
+    return response.data;
   } catch (error) {
-    console.error("Помилка при завантаженні деталей фільму:", error);
+    console.error("Помилка проксі-завантаження деталей:", error);
     return null;
   }
 };
