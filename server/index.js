@@ -15,19 +15,27 @@ const { generateToken } = require('./utils/tokenUtils');
 
 const app = express();
 app.use(express.json());
+
+
 app.use(cors({ 
     origin: [
         'http://localhost:5173', 
-        'https://cinema-library-five.vercel.app', 
-        /\.vercel\.app$/                          
+        'https://cinema-library-five.vercel.app'
     ], 
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['set-cookie']
 }));
 
 app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (['https://cinema-library-five.vercel.app', 'http://localhost:5173'].includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization, Cookie');
     next();
 });
 
