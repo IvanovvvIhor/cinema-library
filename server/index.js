@@ -448,8 +448,8 @@ app.put('/api/profile', protect, async (req, res) => {
 app.post('/api/logout', (req, res) => {
     res.clearCookie('token', { 
         httpOnly: true, 
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production'
+        sameSite: 'none', 
+        secure: true
     });
     res.json({ message: 'Session terminated. Token purged.' });
 });
