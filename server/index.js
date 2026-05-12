@@ -15,9 +15,13 @@ const { generateToken } = require('./utils/tokenUtils');
 const app = express();
 app.use(express.json());
 app.use(cors({ 
-    origin: ['http://localhost:5173', 'http://localhost:3000'], 
+    origin: [
+        'http://localhost:5173', 
+        'https://cinema-library-five.vercel.app', 
+        /\.vercel\.app$/                          
+    ], 
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(cookieParser());
@@ -96,8 +100,8 @@ app.post('/api/register', async (req, res) => {
         const token = generateToken(userData.id);
         res.cookie('token', token, { 
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', // true тільки в продакшені
-            sameSite: 'lax', 
+            secure: true,    
+            sameSite: 'none',
             maxAge: 86400000 
         });
         // --------------------------------------
@@ -126,8 +130,8 @@ app.post('/api/login', async (req, res) => {
         const token = generateToken(user.id);
         res.cookie('token', token, { 
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: 'lax', 
+            secure: true,    
+            sameSite: 'none',
             maxAge: 86400000 
         });
 
