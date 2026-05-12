@@ -459,7 +459,7 @@ app.get('/api/movies/:id', async (req, res) => {
         const { id } = req.params;
         const { language } = req.query;
         const response = await axios.get(`https://api.themoviedb.org/3/movie/${id}`, {
-            headers: { Authorization: `Bearer ${process.env.TMDB_TOKEN}` },
+            headers: { Authorization: `Bearer ${process.env.VITE_TMDB_READ_ACCESS_TOKEN}` },
             params: { language, append_to_response: 'credits,videos' }
         });
         res.json(response.data);
