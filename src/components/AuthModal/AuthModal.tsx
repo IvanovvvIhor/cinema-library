@@ -42,7 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
     try {
       if (mode === 'REGISTER') {
-        const response = await api.post('/register', {
+        const response = await api.post('register', {
           username,
           email,
           password,
@@ -54,7 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         dispatch(login(response.data.user));
         onClose();
       } else {
-        const response = await api.post('/login', { email, password });
+        const response = await api.post('login', { email, password });
         dispatch(login(response.data.user));
         onClose();
       }
