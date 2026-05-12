@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from "react-i18next"; 
+import Logo from '/images/Logo.svg';
 
 export const SideBar: React.FC = () => {
   // #region Хуки та Параметри URL
@@ -43,7 +44,7 @@ export const SideBar: React.FC = () => {
         <Link to={'/'} className="flex items-center gap-3 transition-opacity hover:opacity-80">
           {/* Логотип - завжди оригінального кольору */}
           <img 
-            src="public/images/Logo.svg"
+            src={Logo}
             alt="Logo" 
             className="w-10 h-10 object-contain" 
           />

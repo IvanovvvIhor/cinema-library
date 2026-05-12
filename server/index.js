@@ -329,25 +329,51 @@ app.delete('/api/watchlist/:movieId', protect, async (req, res) => {
 // #region ГОЛОСУВАННЯ
 app.post('/api/lists/:id/vote', protect, async (req, res) => {
     const { id } = req.params;
-    const userId = req.user.id; // ПРИБРАНО String(), зберігаємо як число для бази!
+    // 1. Жорстко перетворюємо ID юзера на число
+    const userId = Number(req.user.id); 
     const { type } = req.body;
 
     try {
         const { data: list, error: fetchError } = await supabase.from('lists').select('*').eq('id', id).single();
         if (fetchError || !list) return res.status(404).json({ error: 'Sector not found' });
 
-        // Якщо масиву ще немає (null), робимо його порожнім []
-        let liked_by = list.liked_by || [];
-        let disliked_by = list.disliked_by || [];
+        // 2. Витягуємо масиви, перетворюємо ВСЕ на числа і використовуємо Set, щоб вбити будь-які дублікати!
+        let liked_by = [...new Set((list.liked_by || []).map(Number))];
+        let disliked_by = [...new Set((list.disliked_by || []).map(Number))];
 
+        /*
+        ========================================================================
+        Якщо ти хочеш ЖОРСТКО ЗАБОРОНИТИ змінювати або відміняти голос 
+        (тільки 1 клік на все життя) - розкоментуй ці 3 рядки:
+        
+        if (liked_by.includes(userId) || disliked_by.includes(userId)) {
+             return res.status(400).json({ error: 'Ви вже проголосували.' });
+        }
+        ========================================================================
+        */
+
+        // 3. Здорова логіка YouTube (можна відмінити або переключити, але не дублювати)
         if (type === 'like') {
-            liked_by = liked_by.includes(userId) ? liked_by.filter(i => i !== userId) : [...liked_by, userId];
-            disliked_by = disliked_by.filter(i => i !== userId);
-        } else {
-            disliked_by = disliked_by.includes(userId) ? disliked_by.filter(i => i !== userId) : [...disliked_by, userId];
-            liked_by = liked_by.filter(i => i !== userId);
+            if (liked_by.includes(userId)) {
+                // Якщо вже лайкав - знімаємо лайк (toggle)
+                liked_by = liked_by.filter(i => i !== userId);
+            } else {
+                // Якщо не лайкав - ставимо лайк і прибираємо дизлайк
+                liked_by.push(userId);
+                disliked_by = disliked_by.filter(i => i !== userId);
+            }
+        } else if (type === 'dislike') {
+            if (disliked_by.includes(userId)) {
+                // Якщо вже дизлайкав - знімаємо дизлайк
+                disliked_by = disliked_by.filter(i => i !== userId);
+            } else {
+                // Якщо не дизлайкав - ставимо дизлайк і прибираємо лайк
+                disliked_by.push(userId);
+                liked_by = liked_by.filter(i => i !== userId);
+            }
         }
 
+        // 4. Оновлюємо базу даних
         const { data: updated, error: updateError } = await supabase.from('lists').update({ 
             liked_by, 
             disliked_by, 
@@ -356,7 +382,7 @@ app.post('/api/lists/:id/vote', protect, async (req, res) => {
         }).eq('id', id).select();
 
         if (updateError) {
-            console.error("[DB UPDATE ERROR]", updateError);
+            console.error("[DB VOTE UPDATE ERROR]", updateError);
             throw updateError;
         }
 
