@@ -1,4 +1,5 @@
 import i18n from '../i18n'; // Імпортуємо наш конфіг i18n
+import api from '../api/axios';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TOKEN = import.meta.env.VITE_TMDB_READ_ACCESS_TOKEN;
@@ -18,17 +19,11 @@ const getTMDBLanguage = () => {
 
 export const fetchMovies = async (endpoint: string, page: number = 1) => {
   try {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const lang = getTMDBLanguage(); 
-    
-    const response = await fetch(`${BASE_URL}${endpoint}${separator}language=${lang}&page=${page}`, options);
-    
-    if (!response.ok) throw new Error('Network response was not ok');
-    const data = await response.json();
-    
-    return { results: data.results, totalPages: data.total_pages };
+
+    const response = await api.get('/movies/trending', { params: { page } });
+    return { results: response.data.results, totalPages: response.data.total_pages };
   } catch (error) {
-    console.error("Помилка при завантаженні фільмів:", error);
+    console.error("Помилка проксі-запиту:", error);
     return { results: [], totalPages: 0 };
   }
 };
