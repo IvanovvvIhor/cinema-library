@@ -469,45 +469,32 @@ app.get('/api/movies/:id', async (req, res) => {
 });
 
 app.get('/api/movies/proxy', async (req, res) => {
-    // 1. ДІАГНОСТИКА (Побачиш це в Logs на Render)
-    console.log('--- PROXY START ---');
-    console.log('Target Endpoint:', req.query.endpoint);
-    console.log('Token Length:', process.env.TMDB_TOKEN ? process.env.TMDB_TOKEN.length : 0);
-
+    const token = process.env.VITE_TMDB_READ_ACCESS_TOKEN || process.env.TMDB_TOKEN;
+    
     try {
         const { endpoint, ...params } = req.query;
-        
-        if (!endpoint) return res.status(400).json({ error: 'Endpoint missing' });
+        if (!endpoint) return res.status(400).json({ error: 'Endpoint required' });
 
-        // Перевірка наявності токена
-        if (!process.env.TMDB_TOKEN || process.env.TMDB_TOKEN.length < 10) {
-            console.error('❌ CRITICAL ERROR: TMDB_TOKEN is empty or invalid on Render!');
-            return res.status(500).json({ error: 'Server configuration error: Missing Token' });
+        if (!token) {
+            console.error('❌ Missing TMDB Token');
+            return res.status(500).json({ error: 'Server configuration error' });
         }
 
+        // Робимо запит. params автоматично розгорне всі фільтри (жанри, сортування тощо)
         const response = await axios.get(`https://api.themoviedb.org/3${endpoint}`, {
             headers: {
-                Authorization: `Bearer ${process.env.TMDB_TOKEN.trim()}`,
+                Authorization: `Bearer ${token.trim()}`,
                 accept: 'application/json'
             },
-            params: params
+            params: params 
         });
 
-        console.log('✅ TMDB Response: SUCCESS');
         res.json(response.data);
     } catch (error) {
-        // ВИВЕДЕ РЕАЛЬНУ ПОМИЛКУ В КОНСОЛЬ РЕНДЕРА
-        console.error('🔴 TMDB PROXY FATAL ERROR:');
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Data:', JSON.stringify(error.response.data));
-        } else {
-            console.error('Message:', error.message);
-        }
-
-        res.status(500).json({ 
-            error: 'TMDB Liaison Failed', 
-            details: error.response ? error.response.data : error.message 
+        console.error('🔴 PROXY ERROR:', error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({ 
+            error: 'TMDB Liaison Failed',
+            details: error.response?.data || error.message 
         });
     }
 });
