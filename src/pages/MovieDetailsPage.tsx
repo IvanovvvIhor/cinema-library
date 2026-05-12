@@ -1,46 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchMovieDetails } from "../services/api";
 import { useAppSelector } from "../store/hooks";
-import { AddToListPopover } from "../components/AddToListPopover/AddToListPopover";
 import { useTranslation } from "react-i18next";
+import api from "../api/axios";
+
+// Імпортуємо компоненти
+import { ReviewForm } from "../components/ReviewForm/ReviewForm";
+import { MovieReviews } from "../components/MovieReviews/MovieReviews";
+import { AddToListPopover } from "../components/AddToListPopover/AddToListPopover";
 
 // #region Інтерфейси
-interface Genre {
-  id: number;
-  name: string;
-}
-
-interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile_path: string | null;
-}
-
-interface Video {
-  key: string;
-  name: string;
-  site: string;
-  type: string;
-  official: boolean;
-}
-
-interface Review {
-  id: string;
-  movieId: string;
-  movieTitle?: string;
-  moviePoster?: string;
-  userId: string;
-  username: string;
-  avatar: string;
-  text: string;
-  date: number;
-  likes: number;
-  dislikes: number;
-  likedBy: string[];
-  dislikedBy: string[];
-}
+interface Genre { id: number; name: string; }
+interface CastMember { id: number; name: string; character: string; profile_path: string | null; }
 
 interface ExtendedMovieDetails {
   id: number;
@@ -52,324 +26,172 @@ interface ExtendedMovieDetails {
   runtime: number;
   overview: string;
   genres: Genre[];
-  credits?: {
-    cast: CastMember[];
-  };
-  videos?: {
-    results: Video[];
-  };
+  credits?: { cast: CastMember[] };
+  videos?: { results: any[] };
 }
 // #endregion
 
 export const MovieDetailsPage: React.FC = () => {
-  // #region Хуки та Параметри
   const { id } = useParams<{ id: string }>();
   const user = useAppSelector((state) => state.auth.user);
-  const { t, i18n } = useTranslation();
-  // #endregion
+  const { t } = useTranslation();
 
-  // #region Стейт: Дані фільму
   const [movie, setMovie] = useState<ExtendedMovieDetails | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
-  // #endregion
+  
+  // Стан для Поповера списків
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  // #region Стейт: Рецензії
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [newReviewText, setNewReviewText] = useState("");
-  const [reviewError, setReviewError] = useState("");
-  // #endregion
+  const loadData = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const [movieData, reviewsRes] = await Promise.all([
+        fetchMovieDetails(id),
+        api.get('/reviews')
+      ]);
+      
+      setMovie(movieData);
+      const movieReviews = reviewsRes.data.filter((r: any) => String(r.movie_id) === String(id));
+      setReviews(movieReviews);
 
-  // #region Effects: Завантаження даних
-  useEffect(() => {
-    const loadMovieAndReviews = async () => {
-      setIsLoading(true);
-      if (id) {
-        const data = await fetchMovieDetails(id);
-        setMovie(data);
-
-        // Завантаження локальних рецензій
-        const allReviews: Review[] = JSON.parse(localStorage.getItem('cinema_reviews_db') || '[]');
-        const movieReviews = allReviews
-          .filter(r => String(r.movieId) === String(id))
-          .sort((a, b) => b.date - a.date);
-        setReviews(movieReviews);
-      }
+    } catch (err) {
+      console.error("Critical mission failure during data load:", err);
+    } finally {
       setIsLoading(false);
-    };
-    loadMovieAndReviews();
-  }, [id, i18n.language]);
-  // #endregion
-
-  // #region Обробники подій: Рецензії та Голосування
-  const handleReviewSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !id || !movie) return;
-
-    if (newReviewText.trim().length < 30) {
-      setReviewError(t('movieDetails.reviewTooShort') || "Review is too short. Minimum 30 characters.");
-      return;
     }
-
-    const newReview: Review = {
-      id: crypto.randomUUID(),
-      movieId: id,
-      movieTitle: movie.title, 
-      moviePoster: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : undefined,
-      userId: user.id,
-      username: user.username,
-      avatar: user.avatar || "",
-      text: newReviewText.trim(),
-      date: Date.now(),
-      likes: 0,
-      dislikes: 0,
-      likedBy: [],
-      dislikedBy: [],
-    };
-
-    const allReviews: Review[] = JSON.parse(localStorage.getItem('cinema_reviews_db') || '[]');
-    allReviews.push(newReview);
-    localStorage.setItem('cinema_reviews_db', JSON.stringify(allReviews));
-
-    setReviews([newReview, ...reviews]);
-    setNewReviewText("");
-    setReviewError("");
   };
 
-  const handleVote = (reviewId: string, type: 'like' | 'dislike') => {
-    if (!user) {
-      alert(t('movieDetails.loginToReview') || "You must be logged in to vote.");
-      return;
-    }
+  useEffect(() => {
+    loadData();
+  }, [id, user?.id]);
 
-    const allReviews: Review[] = JSON.parse(localStorage.getItem('cinema_reviews_db') || '[]');
-    
-    const updatedReviews = allReviews.map(r => {
-      if (r.id === reviewId) {
-        if (r.userId === user.id) return r; // Не можна голосувати за своє
-
-        let likedBy = r.likedBy || [];
-        let dislikedBy = r.dislikedBy || [];
-
-        if (type === 'like') {
-          if (likedBy.includes(user.id)) likedBy = likedBy.filter(uid => uid !== user.id);
-          else {
-            likedBy.push(user.id);
-            dislikedBy = dislikedBy.filter(uid => uid !== user.id);
-          }
-        } else {
-          if (dislikedBy.includes(user.id)) dislikedBy = dislikedBy.filter(uid => uid !== user.id);
-          else {
-            dislikedBy.push(user.id);
-            likedBy = likedBy.filter(uid => uid !== user.id);
-          }
-        }
-
-        return { ...r, likedBy, dislikedBy, likes: likedBy.length, dislikes: dislikedBy.length };
-      }
-      return r;
-    });
-
-    localStorage.setItem('cinema_reviews_db', JSON.stringify(updatedReviews));
-    setReviews(updatedReviews.filter(r => String(r.movieId) === String(id)).sort((a, b) => b.date - a.date));
-  };
-  // #endregion
-
-  // #region Стан завантаження та Помилки
   if (isLoading) return (
-    <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen transition-colors duration-300">
+    <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen">
       <div className="w-10 h-10 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
 
-  if (!movie) return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#111] min-h-screen text-gray-900 dark:text-white transition-colors duration-300 px-6 text-center">
-      <h2 className="text-2xl font-bold mb-4">{t('movieDetails.notFound') || "Movie not found"}</h2>
-      <Link to="/catalog" className="text-[#e50914] hover:underline">← {t('movieDetails.backToCatalog') || "Back to catalog"}</Link>
-    </div>
-  );
-  // #endregion
+  if (!movie) return <div className="text-white text-center mt-20 font-black uppercase italic tracking-widest">Target Asset Not Found</div>;
 
-  // #region Допоміжні розрахунки
   const backdropUrl = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : '';
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined;
-  const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
-  const hours = Math.floor(movie.runtime / 60);
-  const minutes = movie.runtime % 60;
-  const trailer = movie.videos?.results.find(vid => vid.site === "YouTube" && vid.type === "Trailer") || movie.videos?.results.find(vid => vid.site === "YouTube");
-  // #endregion
+  const trailer = movie.videos?.results.find(v => v.site === "YouTube" && v.type === "Trailer");
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] overflow-y-auto transition-colors duration-300 relative">
+    <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] transition-colors duration-300">
       
-      {/* Плеєр Трейлера (Overlay) */}
       {isTrailerOpen && trailer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md px-4">
           <div className="relative w-full max-w-5xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-[#2a2a2a]">
             <button onClick={() => setIsTrailerOpen(false)} className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors">✕</button>
-            <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`} title="YouTube video" allowFullScreen></iframe>
+            <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`} allowFullScreen title="trailer"></iframe>
           </div>
         </div>
       )}
 
-      {/* 1. MOVIE BANNER - Адаптивний банер */}
-      <section className="relative w-full min-h-[500px] lg:h-[70vh] flex items-end pb-10 md:pb-16 px-6 md:px-12 transition-colors duration-300">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 dark:opacity-40 transition-opacity duration-300" style={{ backgroundImage: `url(${backdropUrl})` }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-gray-50/80 dark:from-[#111] dark:via-[#111]/80 to-transparent transition-colors duration-300" />
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-50 via-gray-50/50 dark:from-[#111] dark:via-[#111]/50 to-transparent transition-colors duration-300" />
-
-        <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-10 items-center md:items-end max-w-6xl w-full mx-auto">
-          {posterUrl && <img src={posterUrl} alt={movie.title} className="w-48 md:w-64 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 transition-all duration-300" />}
-          
-          <div className="flex flex-col gap-4 text-center md:text-left">
-            <h1 className="text-gray-900 dark:text-white text-3xl md:text-5xl font-bold tracking-tight transition-colors duration-300">{movie.title}</h1>
-            
-            <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 md:gap-4 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
-              <span className="flex items-center gap-1 text-yellow-500">⭐ {movie.vote_average.toFixed(1)}</span>
-              <span className="hidden md:inline">•</span><span>{releaseYear}</span>
-              <span className="hidden md:inline">•</span><span>{hours}h {minutes}m</span>
+      {/* 1. BANNER SECTION */}
+      <section className="relative w-full h-[500px] lg:h-[70vh] flex items-end pb-16 px-6 md:px-12">
+        <div className="absolute inset-0 bg-cover bg-center opacity-40 transition-opacity" style={{ backgroundImage: `url(${backdropUrl})` }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-50 dark:from-[#111] via-transparent to-transparent" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center md:items-end max-w-6xl w-full mx-auto">
+          {posterUrl && <img src={posterUrl} className="w-48 md:w-64 rounded-2xl shadow-2xl border border-white/10" alt={movie.title} />}
+          <div className="flex-1 text-center md:text-left mb-4">
+            <h1 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-4 uppercase italic tracking-tighter leading-tight">{movie.title}</h1>
+            <div className="flex flex-wrap justify-center md:justify-start gap-4 text-gray-700 dark:text-gray-300 mb-6 font-bold uppercase text-[10px] tracking-[0.2em]">
+               <span className="text-yellow-500">⭐ {movie.vote_average.toFixed(1)}</span>
+               <span>{new Date(movie.release_date).getFullYear()}</span>
+               <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>
             </div>
+            <div className="flex gap-4 justify-center md:justify-start relative">
+               <button onClick={() => setIsTrailerOpen(true)} className="px-8 py-3 bg-[#e50914] text-white font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/30">▶ Trailer</button>
+               
+               {user && (
+                 <div className="relative">
+                   <button 
+                      onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                      className={`px-8 py-3 font-black uppercase tracking-widest rounded-xl transition backdrop-blur-md border border-white/10 flex items-center gap-2 ${
+                          isPopoverOpen 
+                          ? "bg-[#e50914] text-white" 
+                          : "bg-white/10 text-white hover:bg-white/20"
+                      }`}
+                   >
+                      + Watchlist
+                   </button>
 
-            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                {movie.genres.map((g: Genre) => (
-                    <span key={g.id} className="px-2.5 py-0.5 rounded-md border border-gray-300 dark:border-white/20 text-xs transition-colors duration-300">{g.name}</span>
-                ))}
-            </div>
-
-            <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base max-w-3xl leading-relaxed mt-2 transition-colors duration-300 line-clamp-4 md:line-clamp-none">{movie.overview || (t('movieDetails.noOverview') || "Опис відсутній.")}</p>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
-              <button 
-                onClick={() => trailer ? setIsTrailerOpen(true) : alert(t('movieDetails.noTrailer') || 'Трейлер не знайдено')}
-                className={`px-6 md:px-8 py-3 font-bold rounded-xl transition shadow-lg ${trailer ? "bg-[#e50914] text-white hover:bg-red-600 shadow-red-600/20" : "bg-gray-300 dark:bg-[#2a2a2a] text-gray-500 dark:text-[#666] cursor-not-allowed"}`}
-                disabled={!trailer}
-              >
-                ▶ Trailer
-              </button>
-              
-              {user ? (
-                <div className="relative">
-                  <button onClick={() => setIsPopoverOpen(!isPopoverOpen)} className="px-6 md:px-8 py-3 bg-gray-200/80 dark:bg-white/10 text-gray-900 dark:text-white font-bold rounded-xl hover:bg-gray-300/80 dark:hover:bg-white/20 transition backdrop-blur-md">+ Watchlist</button>
-                  {isPopoverOpen && (
-                    <div className="absolute bottom-full md:top-full left-0 mb-2 md:mt-2 z-50">
-                      <AddToListPopover movie={{ id: movie.id, title: movie.title, year: movie.release_date ? new Date(movie.release_date).getFullYear() : 0, genre: movie.genres[0]?.name || "Movie", rating: movie.vote_average, posterUrl: posterUrl || undefined }} onClose={() => setIsPopoverOpen(false)} />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link to="/" className="flex items-center px-6 md:px-8 py-3 bg-gray-200/80 dark:bg-white/10 text-gray-900 dark:text-white font-bold rounded-xl hover:bg-gray-300/80 dark:hover:bg-white/20 transition backdrop-blur-md">
-                  {t('movieDetails.signInToSave') || "Sign In"}
-                </Link>
-              )}
+                   {/* ПОПОВЕР ДЛЯ ВИБОРУ СПИСКУ */}
+                   {isPopoverOpen && (
+                     <div className="absolute bottom-full left-0 mb-4 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                        <AddToListPopover 
+                          movie={{
+                            id: movie.id,
+                            title: movie.title,
+                            year: new Date(movie.release_date).getFullYear(),
+                            rating: movie.vote_average,
+                            posterUrl: posterUrl,
+                            genre: movie.genres[0]?.name || "Movie",
+                            runtime: movie.runtime // ТУТ ВАЖЛИВО: Передаємо runtime
+                          }} 
+                          onClose={() => setIsPopoverOpen(false)} 
+                        />
+                     </div>
+                   )}
+                 </div>
+               )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. CAST & CREW - Список акторів */}
+      {/* 2. CAST SECTION */}
       <section className="px-6 md:px-12 py-10 max-w-6xl mx-auto w-full">
-        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.topCast') || "Top Cast"}</h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar no-scrollbar">
+        <h2 className="text-gray-900 dark:text-white text-xl font-black uppercase italic mb-6 border-l-4 border-[#e50914] pl-4 tracking-tighter">{t('movieDetails.topCast') || "Strategic Personnel"}</h2>
+        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
           {movie.credits?.cast?.slice(0, 10).map((actor: CastMember) => (
-            <div key={actor.id} className="min-w-[110px] md:min-w-[120px] flex flex-col gap-2">
-              <div className="w-[110px] md:w-[120px] h-[160px] md:h-[180px] rounded-xl overflow-hidden bg-gray-200 dark:bg-[#222] transition-colors duration-300">
-                {actor.profile_path ? <img src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} alt={actor.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-600 text-xs">No Photo</div>}
+            <div key={actor.id} className="min-w-[120px] flex flex-col gap-2">
+              <div className="w-[120px] h-[180px] rounded-xl overflow-hidden bg-gray-200 dark:bg-[#222] border border-white/5 shadow-md">
+                {actor.profile_path ? (
+                  <img src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} alt={actor.name} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px] font-black uppercase italic">No Visual Data</div>
+                )}
               </div>
-              <div className="px-1">
-                <p className="text-gray-900 dark:text-white text-xs md:text-sm font-semibold truncate transition-colors duration-300">{actor.name}</p>
-                <p className="text-gray-500 dark:text-[#8c8c8c] text-[10px] md:text-xs truncate transition-colors duration-300">{actor.character}</p>
+              <div className="px-1 text-center">
+                <p className="text-gray-900 dark:text-white text-[11px] font-black uppercase truncate leading-tight">{actor.name}</p>
+                <p className="text-gray-500 text-[9px] font-bold uppercase truncate tracking-tighter">{actor.character}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 3. REVIEWS SECTION - Блок рецензій */}
-      <section className="px-6 md:px-12 py-10 max-w-6xl mx-auto w-full mb-20">
-        <h2 className="text-gray-900 dark:text-white text-xl font-bold mb-6 transition-colors duration-300">{t('movieDetails.reviews') || "User Reviews"}</h2>
+      {/* 3. REVIEWS SECTION */}
+      <section className="px-6 md:px-12 py-12 max-w-6xl mx-auto w-full mb-20 bg-gray-50 dark:bg-[#0d0d0d] rounded-t-[3rem] shadow-2xl border-t border-gray-200 dark:border-white/5">
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8 italic uppercase tracking-tighter">Community Debriefings</h2>
 
         {user ? (
-          <form onSubmit={handleReviewSubmit} className="mb-10 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-5 md:p-6 rounded-2xl transition-colors duration-300">
-            <div className="flex gap-4 mb-4">
-              <div className="hidden sm:block">
-                {user.avatar && !user.avatar.includes('ui-avatars') ? (
-                  <img src={user.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200 dark:border-[#333]" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#e50914] to-orange-500 flex items-center justify-center text-white text-sm font-bold shrink-0">{user.username.substring(0, 2).toUpperCase()}</div>
-                )}
-              </div>
-              <div className="flex-1">
-                <textarea value={newReviewText} onChange={(e) => { setNewReviewText(e.target.value); setReviewError(""); }} placeholder={t('movieDetails.writeReview') || "Write your review... (min 30 characters)"} className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none min-h-[120px]" />
-                {reviewError && <p className="text-[#e50914] text-xs mt-2 font-medium">{reviewError}</p>}
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button type="submit" className="px-6 py-2.5 bg-[#e50914] text-white text-sm font-bold rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newReviewText.trim()}>{t('movieDetails.publishReview') || "Publish"}</button>
-            </div>
-          </form>
+          <ReviewForm 
+            movieId={id!} 
+            movieTitle={movie.title} 
+            moviePoster={posterUrl || ""}
+            user={user} 
+            onReviewPublished={(newRev) => setReviews([newRev, ...reviews])} 
+          />
         ) : (
-          <div className="mb-10 bg-gray-100 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-8 rounded-2xl flex flex-col items-center justify-center text-center transition-colors duration-300">
-            <p className="text-gray-600 dark:text-[#8c8c8c] text-sm mb-4">{t('movieDetails.loginToReview') || "You must be logged in to leave a review."}</p>
-            <Link to="/" className="px-8 py-2.5 bg-[#e50914] text-white font-bold rounded-xl hover:bg-red-600 transition-colors text-sm shadow-lg shadow-red-600/20">Sign In</Link>
+          <div className="mb-12 p-8 bg-white dark:bg-[#111] rounded-2xl text-center border-2 border-dashed border-gray-200 dark:border-[#333]">
+            <p className="text-gray-500 dark:text-[#8c8c8c] mb-4 text-[10px] font-black uppercase tracking-widest italic">Clearance level insufficient. Log in to contribute.</p>
+            <Link to="/" className="inline-block px-8 py-2.5 bg-[#e50914] text-white font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition shadow-lg">Authenticate</Link>
           </div>
         )}
 
-        <div className="flex flex-col gap-4">
-          {reviews.length === 0 ? (
-            <p className="text-gray-500 dark:text-[#666] text-sm italic transition-colors">{t('movieDetails.noReviewsYet') || "No reviews yet."}</p>
-          ) : (
-            reviews.map((review) => {
-              const isOwnReview = user?.id === review.userId;
-              return (
-                <div key={review.id} className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] p-5 rounded-2xl flex gap-4 transition-colors duration-300">
-                  <div className="hidden sm:block">
-                    {review.avatar && !review.avatar.includes('ui-avatars') ? (
-                      <img src={review.avatar} alt={review.username} className="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200 dark:border-[#333]" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#e50914] to-orange-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{review.username.substring(0, 2).toUpperCase()}</div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-gray-900 dark:text-white font-bold text-sm">{review.username}</h4>
-                      <span className="text-gray-400 dark:text-[#666] text-[10px]">{new Date(review.date).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-gray-700 dark:text-[#ccc] text-sm leading-relaxed whitespace-pre-wrap transition-colors mb-4">{review.text}</p>
-                    
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => handleVote(review.id, 'like')}
-                        disabled={isOwnReview}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                          (review.likedBy || []).includes(user?.id || '') 
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-500 border border-green-200 dark:border-green-800' 
-                            : 'bg-gray-50 dark:bg-[#111] text-gray-500 dark:text-[#666] border border-gray-200 dark:border-[#333]'
-                        } ${!isOwnReview ? 'hover:scale-105 active:scale-95' : 'opacity-50 cursor-not-allowed'}`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
-                        {review.likes || 0}
-                      </button>
-
-                      <button 
-                        onClick={() => handleVote(review.id, 'dislike')}
-                        disabled={isOwnReview}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                          (review.dislikedBy || []).includes(user?.id || '') 
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-500 border border-red-200 dark:border-red-800' 
-                            : 'bg-gray-50 dark:bg-[#111] text-gray-500 dark:text-[#666] border border-gray-200 dark:border-[#333]'
-                        } ${!isOwnReview ? 'hover:scale-105 active:scale-95' : 'opacity-50 cursor-not-allowed'}`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7 7" /></svg>
-                        {review.dislikes || 0}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <MovieReviews 
+          reviews={reviews} 
+          currentUser={user} 
+          onDelete={(reviewId) => setReviews(reviews.filter(r => r.id !== reviewId))} 
+        />
       </section>
     </div>
   );

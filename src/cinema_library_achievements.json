@@ -1,0 +1,184 @@
+{
+  "cinema_library_achievements": {
+    "genre_milestones": [
+      {
+        "id": "action_addict",
+        "icon": "💥",
+        "name": "Адреналіновий маніяк",
+        "desc": "Для тих, хто не може жити без вибухів та переслідувань",
+        "genre": "Action",
+        "thresholds": { "bronze": 5, "silver": 20, "gold": 50 }
+      },
+      {
+        "id": "drama_philosopher",
+        "icon": "🎭",
+        "name": "Філософ-мислитель",
+        "desc": "Глибокі роздуми над сенсом життя через призму драми",
+        "genre": "Drama",
+        "thresholds": { "bronze": 5, "silver": 20, "gold": 50 }
+      },
+      {
+        "id": "horror_hunter",
+        "icon": "👻",
+        "name": "Мисливець на привидів",
+        "desc": "Вас не злякати скримерами та темними підвалами",
+        "genre": "Horror",
+        "thresholds": { "bronze": 3, "silver": 15, "gold": 30 }
+      },
+      {
+        "id": "sci_fi_traveler",
+        "icon": "🚀",
+        "name": "Мандрівник у часі",
+        "desc": "Космос, майбутнє та парадокси — ваша стихія",
+        "genre": "Sci-Fi",
+        "thresholds": { "bronze": 5, "silver": 20, "gold": 50 }
+      },
+      {
+        "id": "detective_pro",
+        "icon": "🔍",
+        "name": "Справжній детектив",
+        "desc": "Ви розгадуєте вбивцю вже на десятій хвилині",
+        "genre": "Mystery",
+        "thresholds": { "bronze": 3, "silver": 10, "gold": 25 }
+      }
+    ],
+    "critic_skills": [
+      {
+        "id": "first_word",
+        "icon": "📝",
+        "name": "Перше слово",
+        "desc": "Написати першу рецензію",
+        "requirement": "reviews_count >= 1"
+      },
+      {
+        "id": "golden_pen",
+        "icon": "🖋️",
+        "name": "Золоте перо",
+        "desc": "Ваші рецензії сумарно отримали 50 лайків",
+        "requirement": "total_likes >= 50"
+      },
+      {
+        "id": "hollywood_thunder",
+        "icon": "🎬",
+        "name": "Гроза Голлівуду",
+        "desc": "Написати 20 розгорнутих рецензій",
+        "requirement": "reviews_count >= 20"
+      },
+      {
+        "id": "honest_critic",
+        "icon": "📖",
+        "name": "Чесний критик",
+        "desc": "Написати рецензію довжиною понад 500 символів",
+        "requirement": "review_length >= 500"
+      },
+      {
+        "id": "polemicist",
+        "icon": "🔥",
+        "name": "Полеміст",
+        "desc": "Ваша думка викликає дискусії (10 дизлайків)",
+        "requirement": "total_dislikes >= 10"
+      }
+    ],
+    "collector_achievements": [
+      {
+        "id": "curator",
+        "icon": "🗄️",
+        "name": "Колекціонер",
+        "desc": "Створити 5 власних тематичних списків",
+        "requirement": "custom_lists_count >= 5"
+      },
+      {
+        "id": "planner",
+        "icon": "⏳",
+        "name": "Планувальник",
+        "desc": "Додати 50 фільмів у чергу на перегляд",
+        "requirement": "watchlist_count >= 50"
+      },
+      {
+        "id": "gourmet",
+        "icon": "🧀",
+        "name": "Гурман",
+        "desc": "Мати у списках фільми 10-ти різних жанрів",
+        "requirement": "unique_genres_watched >= 10"
+      }
+    ],
+    "directors_easter_eggs": [
+      {
+        "id": "tarantino_legacy",
+        "icon": "🩸",
+        "name": "Діалоги та Кров",
+        "desc": "Переглянути золоту трійцю Тарантіно",
+        "movies_required": [680, 273248, 466272],
+        "movie_names": ["Pulp Fiction", "The Hateful Eight", "Once Upon a Time in Hollywood"]
+      },
+      {
+        "id": "nolan_mind_blown",
+        "icon": "🌀",
+        "name": "Майстер маніпуляцій",
+        "desc": "Переглянути фундаментальні ігри з розумом від Нолана",
+        "movies_required": [27205, 157336, 155],
+        "movie_names": ["Inception", "Interstellar", "The Dark Knight"]
+      },
+      {
+        "id": "spielberg_magic",
+        "icon": "🦖",
+        "name": "Магія дитинства",
+        "desc": "Переглянути класику, що змінила кінематограф Спілберга",
+        "movies_required": [424, 329, 857],
+        "movie_names": ["Schindler's List", "Jurassic Park", "Saving Private Ryan"]
+      }
+    ],
+    "cult_classics_secrets": [
+      {
+        "id": "detective_wrath",
+        "icon": "📦",
+        "name": "Що в коробці?!",
+        "desc": "Переглянути шедевр Фінчера 'Сім'",
+        "movies_required": [807],
+        "movie_names": ["Se7en"]
+      },
+      {
+        "id": "business_card_god",
+        "icon": "🪓",
+        "name": "Візитна картка",
+        "desc": "Переглянути 'Американський психопат'. Не забудьте про Dorsia",
+        "movies_required": [9859],
+        "movie_names": ["American Psycho"]
+      }
+    ],
+    "masterpieces_group": [
+      {
+        "id": "justice_served",
+        "icon": "⚖️",
+        "name": "Тріумф справедливості",
+        "desc": "Переглянуто фільми 'Нюрнберг' та 'Список Шиндлера'",
+        "movies_required": [1037344, 424],
+        "movie_names": ["Nuremberg", "Schindler's List"]
+      },
+      {
+        "id": "blockbuster_king",
+        "icon": "👑",
+        "name": "Король блокбастерів",
+        "desc": "Переглянуто Темний лицар, Аватар та Месники: Фінал",
+        "movies_required": [155, 19995, 299534],
+        "movie_names": ["The Dark Knight", "Avatar", "Avengers: Endgame"]
+      }
+    ],
+    "special_conditions": [
+      {
+        "id": "night_owl",
+        "icon": "🦉",
+        "name": "Нічна сова",
+        "desc": "Бути активним у додатку між 02:00 та 05:00 ночі",
+        "condition_type": "time_range"
+      },
+      {
+        "id": "atlas_shrugged",
+        "icon": "🏔️",
+        "name": "Атлант розправив плечі",
+        "desc": "Переглянути всі фільми з вашого персонального ТОП-10",
+        "condition_type": "list_completion"
+      }
+    ]
+  }
+}

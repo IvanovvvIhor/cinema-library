@@ -95,7 +95,10 @@
     "avatar": "Avatar URL (optional)",
     "newToCinema": "New to Cinema Library?",
     "alreadyHave": "Already have an account?",
-    "continueGuest": "Continue as Guest"
+    "continueGuest": "Continue as Guest",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other"
   },
   "profile": {
     "title": "Profile",
@@ -108,6 +111,14 @@
       "reviews": "Reviews",
       "lists": "Lists",
       "reputation": "Reputation"
+    },
+    "achievements": {
+      "title": "Strategic Achievements",
+      "unlocked": "Unlocked",
+      "classified": "?? CLASSIFIED ??",
+      "classified_desc": "Hidden Objective: Data encrypted until criteria met.",
+      "no_data": "No signals detected. No achievements found.",
+      "coming_soon": "Achievements (Coming Soon)"
     },
     "progressTitle": "Level 1 Progress",
     "progressToNext": "100 XP to Level 2",

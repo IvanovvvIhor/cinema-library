@@ -95,7 +95,10 @@
     "avatar": "URL Аватарки (необов'язково)",
     "newToCinema": "Вперше у Cinema Library?",
     "alreadyHave": "Вже маєте акаунт?",
-    "continueGuest": "Продовжити як Гість"
+    "continueGuest": "Продовжити як Гість",
+    "genderMale": "Чоловік",
+    "genderFemale": "Жінка",
+    "genderOther": "Інше"
   },
   "profile": {
     "title": "Профіль",
@@ -108,6 +111,14 @@
       "reviews": "Рецензії",
       "lists": "Списки",
       "reputation": "Репутація"
+    },
+    "achievements": {
+      "title": "Стратегічні досягнення",
+      "unlocked": "Розблоковано",
+      "classified": "?? ЗАСЕКРЕЧЕНО ??",
+      "classified_desc": "Ціль прихована: Дані зашифровані до виконання критеріїв.",
+      "no_data": "Сигнали відсутні. Досягнень не виявлено.",
+      "coming_soon": "Досягнення (Незабаром)"
     },
     "progressTitle": "Прогрес 1-го рівня",
     "progressToNext": "100 XP до 2-го рівня",

@@ -1,116 +1,127 @@
-import React, { useState } from 'react';
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { addMovieToList, selectUserLists } from '../../store/watchlistSlice';
-import { fetchMovieDetails } from '../../services/api';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { useAppSelector } from '../../store/hooks';
+import api from '../../api/axios';
 import type { Movie } from '../../types/Movie';
-import type { WatchlistMovie } from '../../types/Watchlist';
 
-// #region Інтерфейси
 interface AddToListPopoverProps {
-  movie: Movie;
+  movie: Movie; // Тепер тільки один об'єкт, ніяких масивів
   onClose: () => void;
+  anchorRect?: DOMRect;
 }
-// #endregion
 
-export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ movie, onClose }) => {
-  // #region Хуки та Redux Диспетчер
-  const dispatch = useAppDispatch();
+export const AddToListPopover: React.FC<AddToListPopoverProps> = ({ 
+  movie, 
+  onClose, 
+  anchorRect 
+}) => {
   const user = useAppSelector((state) => state.auth.user);
-  const userLists = useAppSelector((state) => selectUserLists(state, user?.id));
-  // #endregion
+  const [lists, setLists] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  // #region Локальний Стейт
-  const [loadingListId, setLoadingListId] = useState<string | null>(null);
-  // #endregion
+  useEffect(() => {
+    const loadLists = async () => {
+      if (!user) return;
+      try {
+        setIsLoading(true);
+        const res = await api.get('/lists');
+        
+        // Фільтруємо лише власні активи (завжди String для надійності)
+        const myOwn = res.data.filter((l: any) => String(l.user_id) === String(user.id));
+        setLists(myOwn);
+      } catch (err) {
+        console.error("Critical Sync Failure in Popover:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadLists();
+  }, [user?.id]);
 
-  // #region Обробники подій (Handlers)
-  const handleAdd = async (listId: string) => {
-    setLoadingListId(listId);
-
+  const handleAdd = async (listId: number) => {
+    setActionLoading(listId);
     try {
-      // Отримуємо розширені деталі фільму (runtime, жанри) перед додаванням у список
-      const details = await fetchMovieDetails(movie.id.toString());
-
-      const movieForList: WatchlistMovie = {
-        id: movie.id,
-        title: movie.title,
-        year: movie.year,
-        rating: movie.rating,
-        posterUrl: movie.posterUrl || null,
-        runtime: details?.runtime || 0, 
-        genres: details?.genres ? details.genres.map((g: { name: string }) => g.name) : [movie.genre],
-        addedAt: Date.now(),
-      };
-
-      // Додаємо фільм у конкретний список у Redux сторі
-      dispatch(addMovieToList({ listId, movie: movieForList }));
-    } catch (error) {
-      console.error("Failed to add movie", error);
-    } finally {
-      setLoadingListId(null);
+      // Пряма передача даних у базу через наш оновлений ендпоїнт
+      await api.post(`/lists/${listId}/items`, {
+        movie_id: movie.id,
+        movie_title: movie.title,
+        poster_path: movie.posterUrl,
+        rating: movie.rating || 0,
+        runtime: movie.runtime || 0 // Тепер runtime залітає коректно
+      });
       onClose();
+    } catch (err) {
+      console.error("Strategic assignment failure:", err);
+    } finally {
+      setActionLoading(null);
     }
   };
-  // #endregion
 
-  return (
-    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl shadow-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 py-2 overflow-hidden animate-in fade-in origin-top-left transition-colors duration-300">
+  // Розрахунок позиції (для Portal або для вбудованого режиму)
+  const popoverStyle: React.CSSProperties = anchorRect ? {
+    position: 'fixed',
+    top: `${anchorRect.bottom + window.scrollY + 8}px`,
+    left: `${anchorRect.left + window.scrollX}px`,
+  } : {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    marginBottom: '8px'
+  };
+
+  const content = (
+    <div 
+      style={popoverStyle}
+      className="w-56 bg-[#0d0d0d] border border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[9999] py-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="px-5 pb-2 border-b border-white/5 mb-1">
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] italic">
+          Assign Sector
+        </p>
+        <div className="flex justify-between items-center mt-0.5">
+            <span className="text-[8px] font-bold text-gray-500 uppercase truncate max-w-[100px]">
+                {movie.title}
+            </span>
+            <span className="text-[#e50914] text-[9px] font-black italic">
+                ⭐ {movie.rating?.toFixed(1)}
+            </span>
+        </div>
+      </div>
       
-      {/* Заголовок секції */}
-      <p className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-gray-500 dark:text-[#666] font-bold transition-colors duration-300">
-        Add to list
-      </p>
-      
-      {/* Список колекцій користувача */}
-      <div className="flex flex-col max-h-48 overflow-y-auto custom-scrollbar">
-        {userLists.map((list) => {
-          const isMovieInList = list.movies.some(m => m.id === movie.id);
-          
-          return (
+      <div className="flex flex-col max-h-56 overflow-y-auto no-scrollbar">
+        {isLoading ? (
+          <div className="py-6 flex justify-center">
+            <div className="w-4 h-4 border-2 border-[#e50914] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : lists.length === 0 ? (
+          <div className="py-4 text-center">
+            <p className="text-[9px] font-bold text-gray-600 uppercase italic">No active sectors</p>
+          </div>
+        ) : (
+          lists.map((list) => (
             <button
               key={list.id}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!isMovieInList) handleAdd(list.id);
-              }}
-              disabled={isMovieInList || loadingListId === list.id}
-              className={`flex items-center justify-between px-4 py-2 text-left text-sm transition-colors duration-200 ${
-                isMovieInList 
-                  ? 'text-gray-400 dark:text-[#666] cursor-not-allowed' 
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-[#e50914] dark:hover:text-white'
-              }`}
+              disabled={actionLoading !== null}
+              onClick={() => handleAdd(list.id)}
+              className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-all text-left group"
             >
-              <span className="truncate pr-2">{list.title}</span>
-              
-              {/* Індикація завантаження або наявності фільму в списку */}
-              {loadingListId === list.id && (
-                <div className="w-3 h-3 border-2 border-red-600 dark:border-white border-t-transparent rounded-full animate-spin shrink-0" />
-              )}
-              {isMovieInList && loadingListId !== list.id && (
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+              <span className="text-[11px] font-black uppercase text-gray-300 group-hover:text-white truncate">
+                {list.name}
+              </span>
+              {actionLoading === list.id ? (
+                <div className="w-3 h-3 border-2 border-[#e50914] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-[#e50914] opacity-0 group-hover:opacity-100 shadow-[0_0_8px_#e50914] transition-all" />
               )}
             </button>
-          );
-        })}
+          ))
+        )}
       </div>
-
-      {/* Футер поповера - швидке створення списку */}
-      <div className="border-t border-gray-100 dark:border-[#222] mt-1 pt-1 transition-colors duration-300">
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose(); 
-          }}
-          className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-[#e50914] hover:bg-gray-50 dark:hover:bg-[#222] transition-colors font-medium"
-        >
-          + New List
-        </button>
-      </div>
-
     </div>
   );
+
+  return anchorRect ? ReactDOM.createPortal(content, document.body) : content;
 };

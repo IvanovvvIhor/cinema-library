@@ -1,4 +1,5 @@
 export type Movie = {
+  runtime: number;
   id: number;
   title: string;
   year: number;

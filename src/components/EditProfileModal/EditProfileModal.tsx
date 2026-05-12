@@ -1,57 +1,68 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { updateUserProfile } from '../../store/authSlice';
+import { setCredentials } from '../../store/authSlice';
 import type { Gender } from '../../types/User';
+import api from "../../api/axios";
 
-// #region Інтерфейси
 interface EditProfileModalProps {
   onClose: () => void;
 }
-// #endregion
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) => {
-  // #region Хуки та Redux Диспетчер
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
-  // #endregion
 
-  // #region Локальний Стейт: Форма редагування
   const [username, setUsername] = useState(user?.username || '');
   const [age, setAge] = useState<number | ''>(user?.age || '');
   const [gender, setGender] = useState<Gender>(user?.gender || 'Male');
   const [avatar, setAvatar] = useState(user?.avatar || '');
-  // #endregion
+  const [error, setError] = useState('');
 
-  // #region Перевірка авторизації (Ранній вихід)
   if (!user) return null;
-  // #endregion
 
-  // #region Обробники подій (Handlers)
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Оновлення даних профілю в глобальному сторі
-    dispatch(updateUserProfile({
-      username,
-      age: Number(age),
-      gender,
-      avatar,
-    }));
+    setError('');
 
-    onClose();
+    // Валідація віку (1-120)
+    if (Number(age) <= 0 || Number(age) > 120) {
+      return setError('Please enter a valid age (1-120)');
+    }
+
+    try {
+      // Стукаємо в наш новий PUT маршрут
+      const response = await api.put('/profile', {
+        username,
+        age: Number(age),
+        gender,
+        avatar: avatar || `https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff`
+      });
+
+      console.log('Profile updated:', response.data);
+      
+      // Оновлюємо Redux новими даними від сервера
+      dispatch(setCredentials({ user: response.data.user }));
+      onClose();
+    } catch (err: any) {
+      const serverError = err.response?.data?.error || 'Failed to update profile';
+      setError(serverError);
+      console.error('Update error:', err);
+    }
   };
-  // #endregion
 
-  // #region Стилізовані константи (Tailwind Classes)
-  // Базовий клас для полів вводу, забезпечує консистентність з AuthModal
-  const inputBaseClass = "w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-500";
-  // #endregion
+  // Базовий клас для полів вводу (приховуємо стрілочки лічильника)
+  const inputBaseClass = `
+    w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] 
+    rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors 
+    focus:border-[#e50914] dark:focus:border-[#e50914] placeholder:text-gray-400 dark:placeholder:text-gray-500
+    [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+  `;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm transition-colors duration-300">
       <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] w-full max-w-md rounded-2xl p-8 shadow-2xl relative transition-colors duration-300">
         
-        {/* Кнопка закриття модального вікна */}
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 dark:text-[#8c8c8c] hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -61,41 +72,41 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
           </svg>
         </button>
 
-        {/* Заголовок модалки */}
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Edit Profile</h2>
-          <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1 transition-colors duration-300">Update your personal information</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
+          <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1">Update your personal information</p>
         </div>
+
+        {error && (
+          <div className="bg-red-50 dark:bg-red-600/10 border border-red-200 dark:border-red-600/50 text-red-600 dark:text-red-500 text-sm p-3 rounded-lg mb-4 text-center">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
-          {/* Поле Username */}
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Username</label>
-            <input 
-              required 
-              type="text" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)} 
-              className={inputBaseClass} 
-            />
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Username</label>
+            <input required type="text" value={username} onChange={e => setUsername(e.target.value)} className={inputBaseClass} />
           </div>
 
-          {/* Поля Age та Gender (в один ряд) */}
           <div className="flex gap-4">
             <div className="w-1/3">
-              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Age</label>
+              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Age</label>
               <input 
                 required 
                 type="number" 
-                min="1" 
+                placeholder="Age"
                 value={age} 
-                onChange={e => setAge(Number(e.target.value))} 
+                onChange={e => {
+                    const val = e.target.value;
+                    if (val.length <= 3) setAge(val === '' ? '' : Number(val));
+                }} 
                 className={inputBaseClass} 
               />
             </div>
             <div className="w-2/3">
-              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Gender</label>
+              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Gender</label>
               <select 
                 value={gender} 
                 onChange={e => setGender(e.target.value as Gender)} 
@@ -108,9 +119,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
             </div>
           </div>
 
-          {/* Поле Avatar URL */}
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Avatar URL</label>
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Avatar URL</label>
             <input 
               type="url" 
               placeholder="https://..." 
@@ -118,23 +128,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
               onChange={e => setAvatar(e.target.value)} 
               className={inputBaseClass} 
             />
-            {!avatar && (
-              <p className="text-[10px] text-gray-400 dark:text-[#666] mt-1 pl-1 transition-colors duration-300">Leave empty to use a generated avatar.</p>
-            )}
           </div>
 
-          {/* Поле Email (тільки для читання) */}
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1 transition-colors duration-300">Email (Read Only)</label>
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Email (Read Only)</label>
             <input 
               disabled 
               type="email" 
               value={user.email} 
-              className="w-full bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-400 dark:text-[#666] text-sm cursor-not-allowed transition-colors duration-300" 
+              className="w-full bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] rounded-xl px-4 py-3 text-gray-400 dark:text-[#666] text-sm cursor-not-allowed" 
             />
           </div>
 
-          {/* Кнопки керування формою */}
           <div className="flex gap-3 mt-4">
             <button 
               type="button" 

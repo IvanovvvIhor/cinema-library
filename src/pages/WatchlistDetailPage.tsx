@@ -1,180 +1,246 @@
-import React from "react";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { removeMovieFromList, updateListCover } from "../store/watchlistSlice";
+import { useAppSelector } from "../store/hooks";
 import { useTranslation } from "react-i18next";
+import api from "../api/axios";
 
 export const WatchlistDetailPage: React.FC = () => {
-  // #region Хуки та Навігація
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const { t } = useTranslation();
-  // #endregion
 
-  // #region Селектори Redux (Отримання даних списку)
   const user = useAppSelector((state) => state.auth.user);
-  const list = useAppSelector((state) => 
-    state.watchlist.lists.find((l) => l.id === id)
-  );
-  // #endregion
+  
+  const [list, setList] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUrlInputOpen, setIsUrlInputOpen] = useState(false);
+  const [externalUrl, setExternalUrl] = useState("");
+  
+  const [votes, setVotes] = useState({
+    likes: 0,
+    dislikes: 0,
+    likedBy: [] as string[],
+    dislikedBy: [] as string[]
+  });
 
-  // #region Перевірка доступу (Access Control)
-  if (!list || (list.visibility === 'Private' && list.ownerId !== user?.id)) {
+  const fetchListDetails = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get(`/lists/${id}`);
+      const data = response.data;
+      setList(data);
+      setVotes({
+        likes: data.likes || 0,
+        dislikes: data.dislikes || 0,
+        likedBy: data.liked_by || [],
+        dislikedBy: data.disliked_by || []
+      });
+    } catch (err: any) {
+      console.error("Critical Failure in Sector Data Retrieval:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) fetchListDetails();
+  }, [id]);
+
+  if (isLoading) return (
+    <div className="flex-1 flex items-center justify-center bg-[#0a0a0a] min-h-screen">
+      <div className="w-10 h-10 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
+  if (!list || (!list.is_public && String(list.user_id) !== String(user?.id))) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#111] text-gray-900 dark:text-white transition-colors duration-300">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-[#111] text-white font-black uppercase italic">
         <span className="text-4xl mb-4">🚷</span>
-        <h2 className="text-xl font-bold mb-2">List not found</h2>
-        <button 
-          onClick={() => navigate(-1)} 
-          className="px-6 py-2 bg-gray-200 dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl hover:bg-gray-300 transition-colors mt-4"
-        >
-          Go Back
-        </button>
+        <h2 className="text-xl mb-2 tracking-[0.2em]">Access Denied</h2>
+        <button onClick={() => navigate(-1)} className="px-8 py-2 bg-[#e50914] text-white rounded-xl mt-4 hover:scale-105 transition-transform">Return to Base</button>
       </div>
     );
   }
-  // #endregion
 
-  // #region Допоміжні розрахунки (Обкладинка та Форматування)
-  // Пріоритет: кастомна обкладинка -> постер першого фільму -> null
-  const coverImage = list.coverUrl || (list.movies.length > 0 ? list.movies[0].posterUrl : null);
-  // #endregion
+  const isOwner = String(user?.id) === String(list.user_id);
 
-  // #region Обробники подій (Handlers)
-  
-  // Видалення одного фільму зі списку
-  const handleRemoveMovie = (movieId: number) => {
-    dispatch(removeMovieFromList({ listId: list.id, movieId }));
+  // #region Хендлери
+  const handleVote = async (type: 'like' | 'dislike') => {
+    if (!user) return alert("Authentication required for voting operations.");
+    if (isOwner) return;
+    try {
+      const response = await api.post(`/lists/${list.id}/vote`, { type });
+      setVotes({
+        likes: response.data.likes,
+        dislikes: response.data.dislikes,
+        likedBy: response.data.liked_by,
+        dislikedBy: response.data.disliked_by
+      });
+    } catch (err: any) {
+      console.error("Vote processing failure:", err);
+    }
   };
 
-  // Зміна обкладинки списку через URL
-  const handleChangeCover = () => {
-    if (list.ownerId !== user?.id) return;
-    
-    const newUrl = window.prompt(
-      t('settings.enterAvatarUrl') || "Enter cover image URL:", 
-      list.coverUrl || ""
-    );
-    
-    if (newUrl !== null) {
-      dispatch(updateListCover({ listId: list.id, coverUrl: newUrl.trim() }));
+  const handleUpdateCover = async (posterPath: string) => {
+    if (!posterPath) return;
+    try {
+      await api.put(`/lists/${id}`, { poster_url: posterPath });
+      setList((prev: any) => ({ ...prev, poster_url: posterPath }));
+      setIsUrlInputOpen(false);
+      setExternalUrl("");
+    } catch (err) {
+      console.error("Visual asset deployment failed:", err);
+    }
+  };
+
+  const handleRemoveMovie = async (movie_id: number) => {
+    try {
+        await api.delete(`/watchlist/${movie_id}`); 
+        setList((prev: any) => ({
+            ...prev,
+            list_items: prev.list_items.filter((item: any) => item.movie_id !== movie_id)
+        }));
+    } catch (err) {
+        console.error("Asset purge failed:", err);
     }
   };
   // #endregion
 
+  const coverImage = list.poster_url || (list.list_items?.length > 0 ? list.list_items[0].poster_path : null);
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] overflow-y-auto relative transition-colors duration-300">
+    <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-y-auto relative transition-colors duration-300">
       
-      {/* Імерсивний фоновий градієнт, що підлаштовується під обкладинку */}
-      <div className="absolute top-0 left-0 w-full h-[500px] pointer-events-none overflow-hidden opacity-30">
-        {coverImage ? (
-          <img src={coverImage} alt="blur" className="w-full h-full object-cover blur-3xl scale-150 transition-opacity duration-300" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-b from-[#e50914] to-gray-50 dark:to-[#111] blur-3xl transition-colors duration-300" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/80 dark:via-[#111]/80 to-gray-50 dark:to-[#111] transition-colors duration-300" />
+      {/* BACKGROUND DECOR */}
+      <div className="absolute top-0 left-0 w-full h-[600px] pointer-events-none opacity-20 overflow-hidden">
+        {coverImage && <img key={`bg-${coverImage}`} src={coverImage} alt="blur" className="w-full h-full object-cover blur-[120px] scale-150 animate-in fade-in duration-1000" />}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0a0a0a]" />
       </div>
 
-      <div className="relative z-10 flex flex-col md:flex-row gap-8 px-8 py-12 max-w-[1400px] mx-auto w-full">
+      <div className="relative z-10 flex flex-col md:flex-row gap-12 px-8 py-16 max-w-[1400px] mx-auto w-full">
         
-        {/* ЛІВА КОЛОНКА: Інформація про список та Обкладинка */}
-        <aside className="w-full md:w-[300px] flex-shrink-0 flex flex-col gap-6">
-          <div className="relative group/cover w-full aspect-square bg-gray-200 dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-gray-300 dark:border-[#2a2a2a] transition-all duration-300">
+        {/* SIDEBAR: SECTOR INFO & COVER CONTROL */}
+        <aside className="w-full md:w-[320px] flex-shrink-0 flex flex-col gap-8">
+          <div className="relative group/cover w-full aspect-[2/3] bg-[#111] rounded-3xl overflow-hidden shadow-2xl border border-white/5">
             {coverImage ? (
-              <img src={coverImage} alt={list.title} className="w-full h-full object-cover" />
+              <img key={coverImage} src={coverImage} alt={list.name} className="w-full h-full object-cover animate-in fade-in duration-700" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-6xl opacity-20 dark:opacity-10">🎬</div>
+              <div className="w-full h-full flex items-center justify-center text-6xl opacity-10">🎬</div>
             )}
 
-            {/* Кнопка зміни обкладинки (тільки для власника) */}
-            {list.ownerId === user?.id && (
-              <button 
-                onClick={handleChangeCover}
-                className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 backdrop-blur-[2px]"
-              >
-                <svg className="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="text-xs font-bold uppercase tracking-wider">Change Cover</span>
-              </button>
+            {/* OVERLAY FOR URL UPDATE */}
+            {isOwner && (
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-md opacity-0 group-hover/cover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center p-6 text-center">
+                {!isUrlInputOpen ? (
+                  <button 
+                    onClick={() => setIsUrlInputOpen(true)}
+                    className="px-6 py-3 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:scale-105 transition-transform"
+                  >
+                    Change Cover
+                  </button>
+                ) : (
+                  <div className="w-full animate-in slide-in-from-bottom-2 duration-300">
+                    <input 
+                      type="text"
+                      placeholder="Paste Image URL..."
+                      value={externalUrl}
+                      onChange={(e) => setExternalUrl(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-[10px] mb-3 outline-none focus:border-[#e50914] font-bold"
+                    />
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleUpdateCover(externalUrl)}
+                        className="flex-1 py-2 bg-[#e50914] text-white font-black uppercase text-[9px] rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        Deploy
+                      </button>
+                      <button 
+                        onClick={() => setIsUrlInputOpen(false)}
+                        className="px-3 py-2 bg-white/10 text-white font-black uppercase text-[9px] rounded-lg"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <h1 className="text-gray-900 dark:text-white text-3xl font-bold leading-tight">{list.title}</h1>
-            <p className="text-gray-500 dark:text-[#8c8c8c] text-sm leading-relaxed">{list.description}</p>
+          <div className="flex flex-col gap-4">
+            <h1 className="text-gray-900 dark:text-white text-4xl font-black uppercase italic tracking-tighter leading-none">{list.name}</h1>
+            <p className="text-gray-500 dark:text-[#888] text-sm font-medium italic">"{list.description || 'No briefing available.'}"</p>
             
-            <div className="flex items-center gap-2 mt-2 text-[13px] font-medium text-gray-600 dark:text-[#666]">
-              {list.isDefault ? (
-                <span className="px-2 py-0.5 bg-gray-200 dark:bg-[#2a2a2a] text-gray-700 dark:text-white rounded-md text-[11px] uppercase tracking-wider">System List</span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  {list.visibility === 'Public' ? '🌍 Public' : '🔒 Private'}
-                </span>
-              )}
-              <span>•</span>
-              <span>{list.movies.length} movies</span>
+            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#e50914]">
+                {list.is_public ? '🌍 Public Domain' : '🔒 Internal Asset'}
+                <span className="w-1 h-1 bg-gray-500 rounded-full" />
+                <span className="text-gray-500">{list.list_items?.length || 0} Units</span>
             </div>
+
+            {!isOwner && user && (
+                <div className="grid grid-cols-2 gap-3 mt-4 bg-white dark:bg-[#111] p-4 rounded-[2rem] border border-gray-200 dark:border-white/5 shadow-xl">
+                    <button onClick={() => handleVote('like')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${votes.likedBy.includes(String(user.id)) ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-green-500'}`}>
+                        <span className="text-2xl font-black italic">{votes.likes}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest">Support</span>
+                    </button>
+                    <button onClick={() => handleVote('dislike')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${votes.dislikedBy.includes(String(user.id)) ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-red-500'}`}>
+                        <span className="text-2xl font-black italic">{votes.dislikes}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest">Reject</span>
+                    </button>
+                </div>
+            )}
           </div>
         </aside>
 
-        {/* ПРАВА КОЛОНКА: Таблиця фільмів */}
+        {/* MAIN: ASSET LIST */}
         <main className="flex-1 flex flex-col min-w-0">
-          {list.movies.length > 0 && (
-            <div className="flex items-center gap-4 px-4 py-2 border-b border-gray-200 dark:border-[#222] text-gray-500 dark:text-[#666] text-xs font-medium uppercase tracking-wider mb-2 hidden sm:flex">
-              <div className="w-8 text-center">#</div>
-              <div className="flex-1">Title</div>
-              <div className="w-24 text-center">Rating</div>
-              <div className="w-32 text-right pr-4">Added</div>
-              <div className="w-10"></div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-1">
-            {list.movies.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed border-gray-300 dark:border-[#2a2a2a] rounded-2xl bg-white/50 dark:bg-[#1a1a1a]/50">
-                <span className="text-4xl mb-4">🪹</span>
-                <h3 className="text-gray-900 dark:text-white font-semibold mb-1">This list is empty</h3>
-                <Link to="/catalog" className="mt-4 px-6 py-2 bg-[#e50914] text-white text-sm font-bold rounded-xl hover:bg-red-600 shadow-md">Browse Catalog</Link>
+          <div className="flex flex-col gap-3">
+            {!list.list_items || list.list_items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-gray-200 dark:border-white/5 rounded-[3rem]">
+                <span className="text-gray-400 font-black uppercase italic tracking-widest opacity-30 text-sm">Sector Empty</span>
+                <Link to="/catalog" className="mt-6 px-10 py-3 bg-[#e50914] text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all">Sourcing Data →</Link>
               </div>
             ) : (
-              list.movies.map((movie, index) => (
-                <div key={movie.id} className="group flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white dark:hover:bg-[#1a1a1a] transition-all duration-300 border border-transparent hover:border-gray-200 dark:hover:border-[#2a2a2a]">
-                  <div className="w-8 text-center text-gray-500 dark:text-[#666] font-medium text-sm group-hover:text-gray-900 dark:group-hover:text-white">{index + 1}</div>
-                  <div className="flex-1 flex items-center gap-4 min-w-0">
-                    <Link to={`/movie/${movie.id}`} className="shrink-0">
-                      {typeof movie.posterUrl === 'string'? (
-                        <img src={movie.posterUrl} alt={movie.title} className="w-10 h-14 object-cover rounded-md shadow-md" />
-                      ) : null }
-                    </Link>
-                    <div className="flex flex-col min-w-0">
-                      <Link to={`/movie/${movie.id}`} className="text-gray-900 dark:text-white text-sm font-bold truncate hover:underline underline-offset-2">{movie.title}</Link>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-gray-500 dark:text-[#8c8c8c] text-xs">
-                        <span>{movie.year}</span>
-                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-[#444]" />
-                        <span className="truncate">{movie.genres}</span>
-                      </div>
+              list.list_items.map((item: any, index: number) => (
+                <div key={item.id} className="group flex items-center gap-6 p-4 rounded-[1.5rem] hover:bg-white dark:hover:bg-[#121212] transition-all border border-transparent hover:border-gray-200 dark:hover:border-white/5">
+                  <div className="w-6 text-center text-gray-400 font-black italic text-xs group-hover:text-[#e50914]">{index + 1}</div>
+                  
+                  <Link to={`/movie/${item.movie_id}`} className="shrink-0 relative overflow-hidden rounded-lg shadow-lg">
+                    <img src={item.poster_path} alt={item.movie_title} className="w-12 h-18 object-cover group-hover:scale-110 transition-transform duration-500" />
+                  </Link>
+
+                  <div className="flex-1 min-w-0">
+                    <Link to={`/movie/${item.movie_id}`} className="text-gray-900 dark:text-white font-bold text-sm block truncate hover:text-[#e50914] transition-colors">{item.movie_title}</Link>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">
+                            {item.runtime > 0 ? `${Math.floor(item.runtime / 60)}h ${item.runtime % 60}m` : 'Units Unknown'}
+                        </span>
+                        <span className="w-1 h-1 bg-gray-300 dark:bg-[#333] rounded-full" />
+                        <span className="text-[#e50914] text-[10px] font-black italic">⭐ {item.rating ? item.rating.toFixed(1) : '0.0'}</span>
                     </div>
                   </div>
-                  <div className="w-24 flex items-center justify-center gap-1 hidden sm:flex">
-                    <svg className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                    <span className="text-gray-900 dark:text-white text-sm font-bold">{movie.rating.toFixed(1)}</span>
-                  </div>
-                  <div className="w-32 text-right text-gray-500 dark:text-[#666] text-xs hidden sm:block pr-4">{new Date(movie.addedAt).toLocaleDateString()}</div>
-                  <div className="w-10 flex justify-end shrink-0">
-                    {list.ownerId === user?.id && (
-                      <button 
-                        onClick={() => handleRemoveMovie(movie.id)} 
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-[#e50914] transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
+                  
+                  {isOwner && (
+                    <div className="flex items-center gap-3 ml-auto">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdateCover(item.poster_path); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black transition-all cursor-pointer"
+                          title="Assign as list cover"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </button>
+                        
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveMovie(item.movie_id); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                          title="Purge asset"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
