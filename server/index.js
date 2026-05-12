@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -15,6 +14,7 @@ const { generateToken } = require('./utils/tokenUtils');
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 
 
 app.use(cors({ 
@@ -39,7 +39,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(cookieParser());
+
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
   auth: { persistSession: false },
