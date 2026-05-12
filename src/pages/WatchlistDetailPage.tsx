@@ -22,8 +22,8 @@ export const WatchlistDetailPage: React.FC = () => {
   const [votes, setVotes] = useState({
     likes: 0,
     dislikes: 0,
-    likedBy: [] as string[],
-    dislikedBy: [] as string[]
+    likedBy: [] as any[],
+    dislikedBy: [] as any[]
   });
 
   const fetchListDetails = async () => {
@@ -74,10 +74,10 @@ export const WatchlistDetailPage: React.FC = () => {
     try {
       const response = await api.post(`/lists/${list.id}/vote`, { type });
       setVotes({
-        likes: response.data.likes,
-        dislikes: response.data.dislikes,
-        likedBy: response.data.liked_by,
-        dislikedBy: response.data.disliked_by
+        likes: response.data.likes || 0,
+        dislikes: response.data.dislikes || 0,
+        likedBy: response.data.liked_by || [],
+        dislikedBy: response.data.disliked_by || []
       });
     } catch (err: any) {
       console.error("Vote processing failure:", err);
@@ -110,6 +110,10 @@ export const WatchlistDetailPage: React.FC = () => {
   // #endregion
 
   const coverImage = list.poster_url || (list.list_items?.length > 0 ? list.list_items[0].poster_path : null);
+  
+  // Безпечна перевірка, чи голосував юзер (переводимо все в String для порівняння)
+  const hasLiked = user && votes.likedBy.some(id => String(id) === String(user.id));
+  const hasDisliked = user && votes.dislikedBy.some(id => String(id) === String(user.id));
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-y-auto relative transition-colors duration-300">
@@ -182,11 +186,11 @@ export const WatchlistDetailPage: React.FC = () => {
 
             {!isOwner && user && (
                 <div className="grid grid-cols-2 gap-3 mt-4 bg-white dark:bg-[#111] p-4 rounded-[2rem] border border-gray-200 dark:border-white/5 shadow-xl">
-                    <button onClick={() => handleVote('like')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${votes.likedBy.includes(String(user.id)) ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-green-500'}`}>
+                    <button onClick={() => handleVote('like')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${hasLiked ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-green-500'}`}>
                         <span className="text-2xl font-black italic">{votes.likes}</span>
                         <span className="text-[8px] font-bold uppercase tracking-widest">Support</span>
                     </button>
-                    <button onClick={() => handleVote('dislike')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${votes.dislikedBy.includes(String(user.id)) ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-red-500'}`}>
+                    <button onClick={() => handleVote('dislike')} className={`flex flex-col items-center py-4 rounded-2xl transition-all ${hasDisliked ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-50 dark:bg-[#1a1a1a] text-gray-500 hover:text-red-500'}`}>
                         <span className="text-2xl font-black italic">{votes.dislikes}</span>
                         <span className="text-[8px] font-bold uppercase tracking-widest">Reject</span>
                     </button>

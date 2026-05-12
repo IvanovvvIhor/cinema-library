@@ -112,14 +112,6 @@
       "lists": "Lists",
       "reputation": "Reputation"
     },
-    "achievements": {
-      "title": "Strategic Achievements",
-      "unlocked": "Unlocked",
-      "classified": "?? CLASSIFIED ??",
-      "classified_desc": "Hidden Objective: Data encrypted until criteria met.",
-      "no_data": "No signals detected. No achievements found.",
-      "coming_soon": "Achievements (Coming Soon)"
-    },
     "progressTitle": "Level 1 Progress",
     "progressToNext": "100 XP to Level 2",
     "achievementsTitle": "Achievements (Coming Soon)",
@@ -127,6 +119,12 @@
     "noReviews": "You haven't written any reviews yet.",
     "explore": "Explore movies",
     "achievements": {
+      "title": "Strategic Achievements",
+      "unlocked": "Unlocked",
+      "classified": "?? CLASSIFIED ??",
+      "classified_desc": "Hidden Objective: Data encrypted until criteria met.",
+      "no_data": "No signals detected. No achievements found.",
+      "coming_soon": "Achievements (Coming Soon)",
       "elite": { "name": "Cinephile Elite", "desc": "Watched 250+ films" },
       "critic": { "name": "Critic's Voice", "desc": "Wrote 40+ reviews" },
       "explorer": { "name": "Genre Explorer", "desc": "8 genres watched" },

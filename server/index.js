@@ -329,12 +329,16 @@ app.delete('/api/watchlist/:movieId', protect, async (req, res) => {
 // #region ГОЛОСУВАННЯ
 app.post('/api/lists/:id/vote', protect, async (req, res) => {
     const { id } = req.params;
-    const userId = String(req.user.id);
+    const userId = req.user.id; // ПРИБРАНО String(), зберігаємо як число для бази!
     const { type } = req.body;
 
     try {
-        const { data: list } = await supabase.from('lists').select('*').eq('id', id).single();
-        let { liked_by = [], disliked_by = [] } = list;
+        const { data: list, error: fetchError } = await supabase.from('lists').select('*').eq('id', id).single();
+        if (fetchError || !list) return res.status(404).json({ error: 'Sector not found' });
+
+        // Якщо масиву ще немає (null), робимо його порожнім []
+        let liked_by = list.liked_by || [];
+        let disliked_by = list.disliked_by || [];
 
         if (type === 'like') {
             liked_by = liked_by.includes(userId) ? liked_by.filter(i => i !== userId) : [...liked_by, userId];
@@ -344,12 +348,21 @@ app.post('/api/lists/:id/vote', protect, async (req, res) => {
             liked_by = liked_by.filter(i => i !== userId);
         }
 
-        const { data: updated } = await supabase.from('lists').update({ 
-            liked_by, disliked_by, likes: liked_by.length, dislikes: disliked_by.length 
+        const { data: updated, error: updateError } = await supabase.from('lists').update({ 
+            liked_by, 
+            disliked_by, 
+            likes: liked_by.length, 
+            dislikes: disliked_by.length 
         }).eq('id', id).select();
+
+        if (updateError) {
+            console.error("[DB UPDATE ERROR]", updateError);
+            throw updateError;
+        }
 
         res.json(updated[0]);
     } catch (err) {
+        console.error("[VOTE ERROR]", err.message);
         res.status(500).json({ error: err.message });
     }
 });
