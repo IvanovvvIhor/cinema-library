@@ -13,16 +13,14 @@ export const fetchMovies = async (endpoint: string, page: number = 1) => {
     
     const [path, queryString] = endpoint.split('?');
     
-    // 2. Перетворюємо рядок параметрів у зручний об'єкт
     const existingParams = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {};
 
-    // 3. Робимо запит до нашого проксі
     const response = await api.get('/movies/proxy', { 
       params: { 
-        endpoint: path, // Передаємо ТІЛЬКИ чистий шлях
+        endpoint: path, 
         page,
         language: lang,
-        ...existingParams // Додаємо всі інші фільтри (жанри, сортування)
+        ...existingParams 
       } 
     });
     

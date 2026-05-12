@@ -470,20 +470,33 @@ app.get('/api/movies/:id', async (req, res) => {
 
 app.get('/api/movies/proxy', async (req, res) => {
     try {
-        const { endpoint, ...params } = req.query; 
-        if (!endpoint) return res.status(400).json({ error: 'Endpoint required' });
-        const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const { endpoint, ...params } = req.query;
+        
+        if (!endpoint) {
+            return res.status(400).json({ error: 'Endpoint is missing' });
+        }
 
-        const response = await axios.get(`https://api.themoviedb.org/3${path}`, {
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const finalUrl = `https://api.themoviedb.org/3${cleanEndpoint}`;
+
+        console.log(`[PROXY] Requesting: ${finalUrl}`); // Побачиш це в логах Render
+
+        const response = await axios.get(finalUrl, {
             headers: {
                 Authorization: `Bearer ${process.env.TMDB_TOKEN}`,
                 accept: 'application/json'
             },
-            params: { ...params }
+            params: params 
         });
+
         res.json(response.data);
     } catch (error) {
-        res.status(500).json({ error: 'TMDB Liaison failed' });
+        console.error('[TMDB PROXY ERROR]:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({ 
+            error: 'TMDB Liaison failed', 
+            details: error.response ? error.response.data : error.message 
+        });
     }
 });
 
