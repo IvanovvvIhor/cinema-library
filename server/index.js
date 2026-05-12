@@ -469,27 +469,45 @@ app.get('/api/movies/:id', async (req, res) => {
 });
 
 app.get('/api/movies/proxy', async (req, res) => {
+    // 1. ДІАГНОСТИКА (Побачиш це в Logs на Render)
+    console.log('--- PROXY START ---');
+    console.log('Target Endpoint:', req.query.endpoint);
+    console.log('Token Length:', process.env.TMDB_TOKEN ? process.env.TMDB_TOKEN.length : 0);
+
     try {
         const { endpoint, ...params } = req.query;
-        if (!endpoint) return res.status(400).json({ error: 'Endpoint required' });
+        
+        if (!endpoint) return res.status(400).json({ error: 'Endpoint missing' });
 
-        console.log(`[PROXY] Target: ${endpoint}`);
-        console.log(`[PROXY] Token check: ${process.env.TMDB_TOKEN ? 'EXISTS' : 'MISSING'}`);
+        // Перевірка наявності токена
+        if (!process.env.TMDB_TOKEN || process.env.TMDB_TOKEN.length < 10) {
+            console.error('❌ CRITICAL ERROR: TMDB_TOKEN is empty or invalid on Render!');
+            return res.status(500).json({ error: 'Server configuration error: Missing Token' });
+        }
 
         const response = await axios.get(`https://api.themoviedb.org/3${endpoint}`, {
             headers: {
-                Authorization: `Bearer ${process.env.TMDB_TOKEN}`,
+                Authorization: `Bearer ${process.env.TMDB_TOKEN.trim()}`,
                 accept: 'application/json'
             },
             params: params
         });
+
+        console.log('✅ TMDB Response: SUCCESS');
         res.json(response.data);
     } catch (error) {
-        // ОЦЕ ВИВЕДЕ ПОМИЛКУ В ЛОГИ РЕНДЕРА
-        console.error('🔴 TMDB PROXY ERROR:', error.response?.data || error.message);
+        // ВИВЕДЕ РЕАЛЬНУ ПОМИЛКУ В КОНСОЛЬ РЕНДЕРА
+        console.error('🔴 TMDB PROXY FATAL ERROR:');
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', JSON.stringify(error.response.data));
+        } else {
+            console.error('Message:', error.message);
+        }
+
         res.status(500).json({ 
             error: 'TMDB Liaison Failed', 
-            details: error.response?.data || error.message 
+            details: error.response ? error.response.data : error.message 
         });
     }
 });
