@@ -20,7 +20,7 @@ export const ProfilePage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userReviews, setUserReviews] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
 
   const [isAchExpanded, setIsAchExpanded] = useState(false);
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);

@@ -9,6 +9,7 @@ import api from "../api/axios";
 export const WatchlistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // @ts-expect-error: Variable reserved for future localization implementation
   const { t } = useTranslation();
 
   const user = useAppSelector((state) => state.auth.user);
