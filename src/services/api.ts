@@ -11,11 +11,18 @@ export const fetchMovies = async (endpoint: string, page: number = 1) => {
   try {
     const lang = getTMDBLanguage();
     
+    const [path, queryString] = endpoint.split('?');
+    
+    // 2. Перетворюємо рядок параметрів у зручний об'єкт
+    const existingParams = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {};
+
+    // 3. Робимо запит до нашого проксі
     const response = await api.get('/movies/proxy', { 
       params: { 
-        endpoint,
+        endpoint: path, // Передаємо ТІЛЬКИ чистий шлях
         page,
-        language: lang 
+        language: lang,
+        ...existingParams // Додаємо всі інші фільтри (жанри, сортування)
       } 
     });
     
@@ -28,6 +35,7 @@ export const fetchMovies = async (endpoint: string, page: number = 1) => {
     return { results: [], totalPages: 0 };
   }
 };
+
 
 export const fetchMovieDetails = async (id: string) => {
   try {
