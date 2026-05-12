@@ -31,8 +31,6 @@ export const fetchMovies = async (_endpoint: string, page: number = 1) => {
 export const fetchMovieDetails = async (id: string) => {
   try {
     const lang = getTMDBLanguage();
-    // Тепер деталі теж тягнемо через наш бекенд
-    // Тобі треба буде додати цей маршрут на Render (app.get('/api/movies/:id', ...))
     const response = await api.get(`/movies/${id}`, {
       params: { language: lang }
     });
