@@ -454,20 +454,6 @@ app.post('/api/logout', (req, res) => {
     res.json({ message: 'Session terminated. Token purged.' });
 });
 
-app.get('/api/movies/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { language } = req.query;
-        const response = await axios.get(`https://api.themoviedb.org/3/movie/${id}`, {
-            headers: { Authorization: `Bearer ${process.env.VITE_TMDB_READ_ACCESS_TOKEN}` },
-            params: { language, append_to_response: 'credits,videos' }
-        });
-        res.json(response.data);
-    } catch (err) {
-        res.status(500).json({ error: 'TMDB Liaison Failed' });
-    }
-});
-
 app.get('/api/movies/proxy', async (req, res) => {
     const token = process.env.VITE_TMDB_READ_ACCESS_TOKEN || process.env.TMDB_TOKEN;
     
@@ -498,5 +484,21 @@ app.get('/api/movies/proxy', async (req, res) => {
         });
     }
 });
+
+
+app.get('/api/movies/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { language } = req.query;
+        const response = await axios.get(`https://api.themoviedb.org/3/movie/${id}`, {
+            headers: { Authorization: `Bearer ${process.env.VITE_TMDB_READ_ACCESS_TOKEN}` },
+            params: { language, append_to_response: 'credits,videos' }
+        });
+        res.json(response.data);
+    } catch (err) {
+        res.status(500).json({ error: 'TMDB Liaison Failed' });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`🚀 Reactor running on ${PORT}`));
