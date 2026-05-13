@@ -323,6 +323,26 @@ app.delete('/api/watchlist/:movieId', protect, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// 4. ОНОВИТИ ОБКЛАДИНКУ СПИСКУ (PUT /api/lists/:id)
+app.put('/api/lists/:id', protect, async (req, res) => {
+    const { poster_url } = req.body;
+    try {
+        const { data, error } = await supabase
+            .from('lists')
+            .update({ poster_url })
+            .eq('id', req.params.id)
+            .eq('user_id', req.user.id)
+            .select();
+            
+        if (error) throw error;
+        
+        res.json({ message: 'Visual asset updated', list: data[0] });
+    } catch (error) {
+        console.error("[COVER UPDATE ERROR]", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 // #endregion
 
 

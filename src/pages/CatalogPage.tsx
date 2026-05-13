@@ -37,7 +37,7 @@ export const CatalogPage: React.FC = () => {
 
   const [loadedMovies, setLoadedMovies] = useState<Movie[]>([]);
   const [uiPage, setUiPage] = useState(1);
-  const [totalUiPages, setTotalUiPages] = useState(1); // Додано: Загальна кількість UI-сторінок
+  const [totalUiPages, setTotalUiPages] = useState(1);
   const [tmdbPage, setTmdbPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreTMDB, setHasMoreTMDB] = useState(true);
@@ -71,7 +71,6 @@ export const CatalogPage: React.FC = () => {
       setTmdbPage(1);
       const { formatted, totalPages } = await fetchBatch(1);
       setLoadedMovies(formatted);
-      // TMDB повертає по 20 фільмів. Рахуємо точну кількість наших сторінок по 12 фільмів.
       setTotalUiPages(Math.ceil((totalPages * 20) / ITEMS_PER_UI_PAGE));
       setHasMoreTMDB(totalPages > 1);
       setIsLoading(false);
@@ -87,7 +86,6 @@ export const CatalogPage: React.FC = () => {
     setSearchParams(searchParams);
   };
 
-  // Розумний стрибок по сторінках
   const handlePageClick = async (targetPage: number) => {
     if (targetPage === uiPage || targetPage < 1 || targetPage > totalUiPages) return;
 
@@ -98,7 +96,6 @@ export const CatalogPage: React.FC = () => {
       let fetchedMovies = [...loadedMovies];
       let moreAvailable: boolean = hasMoreTMDB;
 
-      // Підтягуємо дані з TMDB, доки не отримаємо потрібну кількість для цільової сторінки
       while (targetPage * ITEMS_PER_UI_PAGE > fetchedMovies.length && moreAvailable) {
         const { formatted, totalPages } = await fetchBatch(currentTmdb + 1);
         fetchedMovies = [...fetchedMovies, ...formatted];
@@ -132,33 +129,64 @@ export const CatalogPage: React.FC = () => {
     { label: t('catalog.sort.oldest'), value: "primary_release_date.asc" },
   ];
 
-  // Генерація кнопок з номерами сторінок (як у Google)
+  // РОЗШИРЕНА ПАГІНАЦІЯ (1 ... 4 5 6 7 8 ... N)
   const renderPageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5; // Максимальна кількість кнопок
-    let startPage = Math.max(1, uiPage - Math.floor(maxVisible / 2));
-    const endPage = Math.min(totalUiPages, startPage + maxVisible - 1);
+    const total = totalUiPages;
+    const current = uiPage;
+    const delta = 2; // Кількість сторінок зліва/справа від поточної
+    let range: number[] = [];
 
-    if (endPage - startPage + 1 < maxVisible) {
-        startPage = Math.max(1, endPage - maxVisible + 1);
+    // Формуємо центральне вікно сторінок
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+      range.push(i);
     }
 
-    for (let i = startPage; i <= endPage; i++) {
-        pages.push(
-            <button 
-                key={i} 
-                onClick={() => handlePageClick(i)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black uppercase transition-all border ${
-                    uiPage === i 
-                    ? "bg-[#e50914] text-white border-[#e50914] shadow-md scale-110" 
-                    : "bg-gray-100 dark:bg-[#1c1c1c] text-gray-600 dark:text-[#8c8c8c] border-gray-200 dark:border-[#2a2a2a] hover:border-[#e50914] hover:text-[#e50914]"
-                }`}
-            >
-                {i}
-            </button>
-        );
+    // Коригуємо вікно, якщо ми на самому початку
+    if (current - delta <= 2) {
+      range = [];
+      for (let i = 2; i <= Math.min(total - 1, 6); i++) range.push(i);
     }
-    return pages;
+    
+    // Коригуємо вікно, якщо ми в самому кінці
+    if (current + delta >= total - 1) {
+      range = [];
+      for (let i = Math.max(2, total - 5); i <= total - 1; i++) range.push(i);
+    }
+
+    const pages: (number | string)[] = [];
+    
+    if (total > 0) pages.push(1); // Завжди перша сторінка
+
+    if (range.length > 0 && range[0] > 2) {
+      pages.push('...'); // Три крапки після першої
+    }
+
+    pages.push(...range); // Вставляємо центральне вікно
+
+    if (range.length > 0 && range[range.length - 1] < total - 1) {
+      pages.push('...'); // Три крапки перед останньою
+    }
+
+    if (total > 1) pages.push(total); // Завжди остання сторінка
+
+    return pages.map((page, index) => {
+      if (page === '...') {
+        return <span key={`ellipsis-${index}`} className="px-1 text-gray-500 font-black tracking-widest">...</span>;
+      }
+      return (
+        <button 
+          key={page} 
+          onClick={() => handlePageClick(page as number)}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black uppercase transition-all border ${
+            uiPage === page 
+            ? "bg-[#e50914] text-white border-[#e50914] shadow-md scale-110" 
+            : "bg-gray-100 dark:bg-[#1c1c1c] text-gray-600 dark:text-[#8c8c8c] border-gray-200 dark:border-[#2a2a2a] hover:border-[#e50914] hover:text-[#e50914]"
+          }`}
+        >
+          {page}
+        </button>
+      );
+    });
   };
   // #endregion
 
@@ -209,7 +237,6 @@ export const CatalogPage: React.FC = () => {
           ) : (<p className="text-center text-gray-500 font-bold uppercase italic mt-10">{t('catalog.noMovies')}</p>)}
         </div>
 
-        {/* НОВИЙ БЛОК ПАГІНАЦІЇ */}
         {loadedMovies.length > 0 && totalUiPages > 1 && (
           <div className="shrink-0 mt-4 pt-4 border-t border-gray-200 dark:border-[#222] flex items-center justify-center gap-4 pb-2">
             <button 
