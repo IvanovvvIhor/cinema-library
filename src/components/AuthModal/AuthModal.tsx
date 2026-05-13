@@ -35,16 +35,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     e.preventDefault();
     setError('');
 
-    // Валідація віку перед відправкою
-    if (mode === 'REGISTER' && (Number(age) <= 0 || Number(age) > 120)) {
-      return setError(t('auth.errorInvalidAge') || 'Please enter a valid age (1-120)');
+    // --- ЖОРСТКА ВАЛІДАЦІЯ ---
+    
+    // 1. Валідація пошти (тільки Gmail або iCloud)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|icloud\.com)$/i;
+    if (!emailRegex.test(email.trim())) {
+      return setError(t('auth.errorEmailProvider') || 'Only Gmail and iCloud addresses are allowed');
     }
 
+    // 2. Валідація паролю (мінімум 6 символів)
+    if (password.length < 6) {
+      return setError(t('auth.errorPasswordShort') || 'Password must be at least 6 characters');
+    }
+
+    if (mode === 'REGISTER') {
+      // 3. Валідація імені користувача (від 3 до 20 символів)
+      if (username.trim().length < 3 || username.length > 20) {
+        return setError(t('auth.errorUsernameLength') || 'Username must be between 3 and 20 characters');
+      }
+
+      // 4. Валідація віку (від 1 до 120)
+      if (Number(age) <= 0 || Number(age) > 120) {
+        return setError(t('auth.errorInvalidAge') || 'Please enter a valid age (1-120)');
+      }
+    }
+
+    // --- ВІДПРАВКА ДАНИХ ---
     try {
       if (mode === 'REGISTER') {
         const response = await api.post('register', {
-          username,
-          email,
+          username: username.trim(),
+          email: email.trim().toLowerCase(),
           password,
           age: Number(age),
           gender,
@@ -54,7 +75,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         dispatch(login(response.data.user));
         onClose();
       } else {
-        const response = await api.post('login', { email, password });
+        const response = await api.post('login', { 
+          email: email.trim().toLowerCase(), 
+          password 
+        });
         dispatch(login(response.data.user));
         onClose();
       }
@@ -138,14 +162,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
         <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
           {mode === 'LOGIN' ? (
-            <p>{t('auth.newToCinema')} <button onClick={() => { setMode('REGISTER'); setError(''); }} className="text-gray-900 dark:text-white hover:text-[#e50914] font-medium transition-colors">{t('auth.signup')} now</button></p>
+            <p>{t('auth.newToCinema')} <button type="button" onClick={() => { setMode('REGISTER'); setError(''); }} className="text-gray-900 dark:text-white hover:text-[#e50914] font-medium transition-colors">{t('auth.signup')} now</button></p>
           ) : (
-            <p>{t('auth.alreadyHave')} <button onClick={() => { setMode('LOGIN'); setError(''); }} className="text-gray-900 dark:text-white hover:text-[#e50914] font-medium transition-colors">{t('auth.login')}</button></p>
+            <p>{t('auth.alreadyHave')} <button type="button" onClick={() => { setMode('LOGIN'); setError(''); }} className="text-gray-900 dark:text-white hover:text-[#e50914] font-medium transition-colors">{t('auth.login')}</button></p>
           )}
         </div>
 
         <div className="mt-6 pt-6 border-t border-gray-200 dark:border-[#2a2a2a] text-center">
-          <button onClick={handleGuest} className="text-gray-500 hover:text-gray-900 dark:text-[#8c8c8c] dark:hover:text-white text-sm font-medium transition-colors">
+          <button type="button" onClick={handleGuest} className="text-gray-500 hover:text-gray-900 dark:text-[#8c8c8c] dark:hover:text-white text-sm font-medium transition-colors">
             {t('auth.continueGuest')}
           </button>
         </div>
