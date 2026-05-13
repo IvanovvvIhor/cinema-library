@@ -57,7 +57,7 @@ export const CatalogPage: React.FC = () => {
       genre: activeGenres.length > 0 ? activeGenres[0] : "Movie",
       rating: m.vote_average,
       posterUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : undefined,
-      runtime: 0 // Runtime підтягнеться лише при додаванні з MovieDetails
+      runtime: 0 
     }));
     return { formatted, totalPages };
   };

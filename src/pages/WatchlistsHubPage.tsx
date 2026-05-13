@@ -19,8 +19,8 @@ const fetchData = async () => {
     try {
       // ВИДАЛЯЄМО зайве /api/
       const [myRes, publicRes] = await Promise.all([
-        api.get('/lists'),        // axios сам зробить http://localhost:5000/api/lists
-        api.get('/lists/public') // axios сам зробить http://localhost:5000/api/lists/public
+        api.get('/lists'),   
+        api.get('/lists/public') 
       ]);
       
       console.log("My Lists from DB:", myRes.data);
