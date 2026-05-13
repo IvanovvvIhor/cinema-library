@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
@@ -36,6 +37,7 @@ export const CatalogPage: React.FC = () => {
 
   const [loadedMovies, setLoadedMovies] = useState<Movie[]>([]);
   const [uiPage, setUiPage] = useState(1);
+  const [totalUiPages, setTotalUiPages] = useState(1); // Додано: Загальна кількість UI-сторінок
   const [tmdbPage, setTmdbPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreTMDB, setHasMoreTMDB] = useState(true);
@@ -69,6 +71,8 @@ export const CatalogPage: React.FC = () => {
       setTmdbPage(1);
       const { formatted, totalPages } = await fetchBatch(1);
       setLoadedMovies(formatted);
+      // TMDB повертає по 20 фільмів. Рахуємо точну кількість наших сторінок по 12 фільмів.
+      setTotalUiPages(Math.ceil((totalPages * 20) / ITEMS_PER_UI_PAGE));
       setHasMoreTMDB(totalPages > 1);
       setIsLoading(false);
     };
@@ -83,22 +87,37 @@ export const CatalogPage: React.FC = () => {
     setSearchParams(searchParams);
   };
 
-  const handleNextPage = async () => {
-    const nextUiPage = uiPage + 1;
-    if (nextUiPage * ITEMS_PER_UI_PAGE > loadedMovies.length && hasMoreTMDB) {
+  // Розумний стрибок по сторінках
+  const handlePageClick = async (targetPage: number) => {
+    if (targetPage === uiPage || targetPage < 1 || targetPage > totalUiPages) return;
+
+    const requiredItems = targetPage * ITEMS_PER_UI_PAGE;
+    if (requiredItems > loadedMovies.length && hasMoreTMDB) {
       setIsLoading(true);
-      const { formatted, totalPages } = await fetchBatch(tmdbPage + 1);
-      setLoadedMovies(prev => [...prev, ...formatted]);
-      setTmdbPage(prev => prev + 1);
-      setHasMoreTMDB(tmdbPage + 1 < totalPages);
+      let currentTmdb = tmdbPage;
+      let fetchedMovies = [...loadedMovies];
+      let moreAvailable: boolean = hasMoreTMDB;
+
+      // Підтягуємо дані з TMDB, доки не отримаємо потрібну кількість для цільової сторінки
+      while (targetPage * ITEMS_PER_UI_PAGE > fetchedMovies.length && moreAvailable) {
+        const { formatted, totalPages } = await fetchBatch(currentTmdb + 1);
+        fetchedMovies = [...fetchedMovies, ...formatted];
+        currentTmdb++;
+        moreAvailable = currentTmdb < totalPages;
+      }
+
+      setLoadedMovies(fetchedMovies);
+      setTmdbPage(currentTmdb);
+      setHasMoreTMDB(moreAvailable);
       setIsLoading(false);
     }
-    setUiPage(nextUiPage);
+    setUiPage(targetPage);
   };
 
   const startIndex = (uiPage - 1) * ITEMS_PER_UI_PAGE;
   const displayMovies = loadedMovies.slice(startIndex, startIndex + ITEMS_PER_UI_PAGE);
 
+  // #region UI Helpers
   const SUB_NAV_LINKS = [
     { to: "/catalog",             label: t('catalog.all') },
     { to: "/catalog/topRated",    label: t('catalog.topRated') },
@@ -112,6 +131,36 @@ export const CatalogPage: React.FC = () => {
     { label: t('catalog.sort.newest'), value: "primary_release_date.desc" },
     { label: t('catalog.sort.oldest'), value: "primary_release_date.asc" },
   ];
+
+  // Генерація кнопок з номерами сторінок (як у Google)
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5; // Максимальна кількість кнопок
+    let startPage = Math.max(1, uiPage - Math.floor(maxVisible / 2));
+    const endPage = Math.min(totalUiPages, startPage + maxVisible - 1);
+
+    if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        pages.push(
+            <button 
+                key={i} 
+                onClick={() => handlePageClick(i)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black uppercase transition-all border ${
+                    uiPage === i 
+                    ? "bg-[#e50914] text-white border-[#e50914] shadow-md scale-110" 
+                    : "bg-gray-100 dark:bg-[#1c1c1c] text-gray-600 dark:text-[#8c8c8c] border-gray-200 dark:border-[#2a2a2a] hover:border-[#e50914] hover:text-[#e50914]"
+                }`}
+            >
+                {i}
+            </button>
+        );
+    }
+    return pages;
+  };
+  // #endregion
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50 dark:bg-[#111] overflow-hidden transition-colors relative">
@@ -160,11 +209,34 @@ export const CatalogPage: React.FC = () => {
           ) : (<p className="text-center text-gray-500 font-bold uppercase italic mt-10">{t('catalog.noMovies')}</p>)}
         </div>
 
-        {loadedMovies.length > 0 && (
-          <div className="shrink-0 mt-4 pt-4 border-t border-gray-200 dark:border-[#222] flex items-center justify-center gap-6 pb-2">
-            <button onClick={() => setUiPage(prev => Math.max(prev - 1, 1))} disabled={uiPage === 1} className="text-gray-500 hover:text-[#e50914] font-black uppercase italic text-xs transition-colors">← {t('catalog.prev')}</button>
-            <span className="text-gray-900 dark:text-white text-xs font-black uppercase italic bg-gray-100 dark:bg-[#1c1c1c] px-4 py-1.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a]">{t('catalog.page')} {uiPage}</span>
-            <button onClick={handleNextPage} disabled={displayMovies.length < ITEMS_PER_UI_PAGE && !hasMoreTMDB} className="text-[#e50914] hover:text-red-600 font-black uppercase italic text-xs transition-colors">{t('catalog.next')} →</button>
+        {/* НОВИЙ БЛОК ПАГІНАЦІЇ */}
+        {loadedMovies.length > 0 && totalUiPages > 1 && (
+          <div className="shrink-0 mt-4 pt-4 border-t border-gray-200 dark:border-[#222] flex items-center justify-center gap-4 pb-2">
+            <button 
+                onClick={() => handlePageClick(uiPage - 1)} 
+                disabled={uiPage === 1} 
+                className="text-gray-500 hover:text-[#e50914] disabled:opacity-30 disabled:hover:text-gray-500 font-black uppercase italic text-[10px] sm:text-xs transition-colors"
+            >
+                ← {t('catalog.prev')}
+            </button>
+            
+            {/* Блок з цифрами для ПК/Планшетів */}
+            <div className="hidden sm:flex items-center gap-2">
+                {renderPageNumbers()}
+            </div>
+
+            {/* Компактний блок для мобілок (показує просто поточну/всього) */}
+            <span className="sm:hidden text-gray-900 dark:text-white text-xs font-black uppercase italic bg-gray-100 dark:bg-[#1c1c1c] px-4 py-1.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a]">
+                {uiPage} / {totalUiPages}
+            </span>
+
+            <button 
+                onClick={() => handlePageClick(uiPage + 1)} 
+                disabled={uiPage === totalUiPages} 
+                className="text-[#e50914] hover:text-red-600 disabled:opacity-30 disabled:hover:text-[#e50914] font-black uppercase italic text-[10px] sm:text-xs transition-colors"
+            >
+                {t('catalog.next')} →
+            </button>
           </div>
         )}
       </div>

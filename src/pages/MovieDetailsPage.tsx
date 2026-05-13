@@ -133,7 +133,7 @@ export const MovieDetailsPage: React.FC = () => {
                             rating: movie.vote_average,
                             posterUrl: posterUrl,
                             genre: movie.genres[0]?.name || "Movie",
-                            runtime: movie.runtime // ТУТ ВАЖЛИВО: Передаємо runtime
+                            runtime: movie.runtime 
                           }} 
                           onClose={() => setIsPopoverOpen(false)} 
                         />
@@ -147,21 +147,35 @@ export const MovieDetailsPage: React.FC = () => {
       </section>
 
       {/* 2. CAST SECTION */}
-      <section className="px-6 md:px-12 py-10 max-w-6xl mx-auto w-full">
-        <h2 className="text-gray-900 dark:text-white text-xl font-black uppercase italic mb-6 border-l-4 border-[#e50914] pl-4 tracking-tighter">{t('movieDetails.topCast') || "Strategic Personnel"}</h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-          {movie.credits?.cast?.slice(0, 10).map((actor: CastMember) => (
-            <div key={actor.id} className="min-w-[120px] flex flex-col gap-2">
+      <section className="py-10 max-w-6xl mx-auto w-full overflow-hidden">
+        <h2 className="px-6 md:px-12 text-gray-900 dark:text-white text-xl font-black uppercase italic mb-6 border-l-4 border-[#e50914] tracking-tighter">
+          {t('movieDetails.topCast') || "Strategic Personnel"}
+        </h2>
+        
+        {/* ТОТАЛЬНЕ ЗНИЩЕННЯ СКРОЛБАРУ: Вбудовані класи Tailwind ховають його в усіх існуючих браузерах */}
+        <div className="px-6 md:px-12 flex flex-nowrap gap-4 overflow-x-auto pb-6 scroll-smooth w-full after:content-[''] after:w-4 after:shrink-0 md:after:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {movie.credits?.cast?.slice(0, 8).map((actor: CastMember) => (
+            <div key={actor.id} className="w-[120px] min-w-[120px] shrink-0 flex-none flex flex-col gap-2">
               <div className="w-[120px] h-[180px] rounded-xl overflow-hidden bg-gray-200 dark:bg-[#222] border border-white/5 shadow-md">
                 {actor.profile_path ? (
-                  <img src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} alt={actor.name} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+                  <img 
+                    src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} 
+                    alt={actor.name} 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" 
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px] font-black uppercase italic">No Visual Data</div>
+                  <div className="w-full h-full flex items-center justify-center text-center p-2 text-gray-500 text-[10px] font-black uppercase italic">
+                    No Visual Data
+                  </div>
                 )}
               </div>
               <div className="px-1 text-center">
-                <p className="text-gray-900 dark:text-white text-[11px] font-black uppercase truncate leading-tight">{actor.name}</p>
-                <p className="text-gray-500 text-[9px] font-bold uppercase truncate tracking-tighter">{actor.character}</p>
+                <p className="text-gray-900 dark:text-white text-[11px] font-black uppercase truncate leading-tight" title={actor.name}>
+                  {actor.name}
+                </p>
+                <p className="text-gray-500 text-[9px] font-bold uppercase truncate tracking-tighter" title={actor.character}>
+                  {actor.character}
+                </p>
               </div>
             </div>
           ))}
