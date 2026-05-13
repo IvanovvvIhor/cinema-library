@@ -341,17 +341,6 @@ app.post('/api/lists/:id/vote', protect, async (req, res) => {
         let liked_by = [...new Set((list.liked_by || []).map(Number))];
         let disliked_by = [...new Set((list.disliked_by || []).map(Number))];
 
-        /*
-        ========================================================================
-        Якщо ти хочеш ЖОРСТКО ЗАБОРОНИТИ змінювати або відміняти голос 
-        (тільки 1 клік на все життя) - розкоментуй ці 3 рядки:
-        
-        if (liked_by.includes(userId) || disliked_by.includes(userId)) {
-             return res.status(400).json({ error: 'Ви вже проголосували.' });
-        }
-        ========================================================================
-        */
-
         // 3. Здорова логіка YouTube (можна відмінити або переключити, але не дублювати)
         if (type === 'like') {
             if (liked_by.includes(userId)) {
