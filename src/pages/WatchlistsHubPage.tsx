@@ -13,18 +13,20 @@ export const WatchlistsHubPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-const fetchData = async () => {
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
+  const fetchData = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      // ВИДАЛЯЄМО зайве /api/
       const [myRes, publicRes] = await Promise.all([
-        api.get('/lists'),   
+        api.get('/lists', getAuthHeaders()), 
         api.get('/lists/public') 
       ]);
       
-      console.log("My Lists from DB:", myRes.data);
-
       const myOwnLists = myRes.data.filter((l: any) => String(l.user_id) === String(user.id));
       setUserLists(myOwnLists);
       

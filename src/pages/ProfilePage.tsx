@@ -25,31 +25,36 @@ export const ProfilePage: React.FC = () => {
   const [isAchExpanded, setIsAchExpanded] = useState(false);
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
 
-  const loadProfileData = async () => {
-    if (!user) return;
-    try {
-      setIsLoading(true);
-      const profileRes = await api.get('/profile'); 
-      if (profileRes.data) {
-        dispatch(setCredentials({ user: profileRes.data })); 
-      }
+    const loadProfileData = async () => {
+        if (!user) return;
+        try {
+        setIsLoading(true);
+        const profileRes = await api.get('/profile', getAuthHeaders()); 
+        if (profileRes.data) {
+            dispatch(setCredentials({ user: profileRes.data })); 
+        }
 
-      const [reviewsRes, achRes] = await Promise.all([
-        api.get('/reviews'),
-        api.get('/achievements')
-      ]);
-      
-      const myReviews = reviewsRes.data.filter((r: any) => 
-        String(r.user_id).trim() === String(user.id).trim()
-      );
-      
-      setUserReviews(myReviews);
-      setAchievements(achRes.data);
-    } catch (err) {
-      console.error("Sync error:", err);
-    } finally {
-      setIsLoading(false);
-    }
+        const [reviewsRes, achRes] = await Promise.all([
+            api.get('/reviews', getAuthHeaders()),
+            api.get('/achievements', getAuthHeaders())
+        ]);
+        
+        const myReviews = reviewsRes.data.filter((r: any) => 
+            String(r.user_id).trim() === String(user.id).trim()
+        );
+        
+        setUserReviews(myReviews);
+        setAchievements(achRes.data);
+        } catch (err) {
+        console.error("Sync error:", err);
+        } finally {
+        setIsLoading(false);
+        }
+  };
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return { headers: { Authorization: `Bearer ${token}` } };
   };
 
   useEffect(() => {
@@ -61,6 +66,7 @@ export const ProfilePage: React.FC = () => {
     dispatch(logout());
     navigate('/');
   };
+
 
   if (!user || isGuest) {
     return (
