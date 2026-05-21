@@ -51,8 +51,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     }
 
     try {
+      let response;
       if (mode === 'REGISTER') {
-        const response = await api.post('register', {
+        response = await api.post('register', {
           username: username.trim(),
           email: email.trim().toLowerCase(),
           password,
@@ -60,21 +61,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           gender,
           avatar: avatar || `https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff`
         });
+      } else {
+        response = await api.post('login', { 
+          email: email.trim().toLowerCase(), 
+          password 
+        });
+      }
+
+      // --- ДЕБАГ: Дивимось, що прийшло ---
+      console.log("SERVER RESPONSE:", response.data); 
+
+      if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
         dispatch(login(response.data.user));
         onClose();
       } else {
-        const response = await api.post('login', { 
-          email: email.trim().toLowerCase(), 
-          password 
-        });
-        localStorage.setItem('token', response.data.token);
-        dispatch(login(response.data.user));
-        onClose();
+        // Якщо токена немає, ми побачимо це повідомлення в Eruda
+        setError("Помилка: Сервер повернув дані, але без токена. Перевір логи сервера.");
       }
     } catch (err: any) {
-      const serverError = err.response?.data?.error || t('auth.errorInvalid');
-      setError(serverError);
+      console.error("Auth error:", err);
+      setError(err.response?.data?.error || "Сталася невідома помилка");
     }
   };
 
