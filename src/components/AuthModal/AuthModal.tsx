@@ -68,7 +68,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         });
       }
 
-      // --- ДЕБАГ: Дивимось, що прийшло ---
       console.log("SERVER RESPONSE:", response.data); 
 
       if (response.data && response.data.token) {
