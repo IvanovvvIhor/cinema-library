@@ -19,14 +19,13 @@ app.use(cookieParser());
 
 app.use(cors({ 
     origin: function (origin, callback) {
-        if (!origin 
-            || origin === 'http://localhost:5173' 
-            || origin === 'https://cinema-library-five.vercel.app'
-            || /^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)
-        ) {
+        if (!origin || 
+            origin === 'http://localhost:5173' || 
+            origin === 'https://cinema-library-five.vercel.app' || 
+            /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) {
             callback(null, true);
         } else {
-            callback(new Error('Blocked by CORS'));
+            callback(new Error('CORS Policy Blocked This Request'));
         }
     },
     credentials: true,
@@ -34,6 +33,18 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie']
 }));
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (['https://cinema-library-five.vercel.app', 'http://localhost:5173'].includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization, Cookie');
+    next();
+});
+
 
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
@@ -103,7 +114,6 @@ app.get('/api/movies/trending', async (req, res) => {
     }
 });
 
-
 // #region АВТЕНТИФІКАЦІЯ
 app.post('/api/register', async (req, res) => {
     const { username, email, password, age, gender, avatar } = req.body;
@@ -125,10 +135,15 @@ app.post('/api/register', async (req, res) => {
             throw userError;
         }
 
+        // --- ГЕНЕРАЦІЯ ТОКЕНА ПРИ РЕЄСТРАЦІЇ ---
         const token = generateToken(userData.id);
-        
-        // Зберігаємо в кукі (для ПК) та віддаємо токен (для мобілок)
-        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 86400000 });
+        res.cookie('token', token, { 
+            httpOnly: true, 
+            secure: true,    
+            sameSite: 'none',
+            maxAge: 86400000 
+        });
+        // --------------------------------------
 
         const defaultLists = [
             { user_id: userData.id, name: 'Watchlist', description: 'Initial target acquisition', is_system: true, is_public: false },
@@ -137,7 +152,7 @@ app.post('/api/register', async (req, res) => {
         ];
         await supabase.from('lists').insert(defaultLists);
 
-        res.status(201).json({ message: 'Success', user: userData, token });
+        res.status(201).json({ message: 'Success', user: userData });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -152,23 +167,25 @@ app.post('/api/login', async (req, res) => {
         }
 
         const token = generateToken(user.id);
-        
-        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 86400000 });
+        res.cookie('token', token, { 
+            httpOnly: true, 
+            secure: true,    
+            sameSite: 'none',
+            maxAge: 86400000 
+        });
 
         res.json({
             user: { 
                 id: user.id, username: user.username, email: user.email,
                 avatar: user.avatar, xp: user.xp, level: user.level, rank: user.rank,
                 age: user.age, gender: user.gender
-            },
-            token
+            }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 // #endregion
-
 
 // #region РЕЦЕНЗІЇ
 app.post('/api/reviews', protect, async (req, res) => {

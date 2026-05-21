@@ -2,20 +2,23 @@ const jwt = require('jsonwebtoken');
 
 const protect = (req, res, next) => {
     let token = req.cookies.token;
-
-    // Шукаємо токен в заголовку Authorization (Bearer)
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
         token = req.headers.authorization.split(' ')[1];
     }
 
-    if (!token) return res.status(401).json({ error: 'Not authorized' });
+    if (!token) {
+        console.warn('[AUTH ERROR] No token found in cookies or headers');
+        return res.status(401).json({ error: 'Немає доступу, залогіньтесь' });
+    }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
+        req.user = decoded; 
+        next(); 
     } catch (error) {
-        res.status(401).json({ error: 'Token failed' });
+        console.error('[AUTH ERROR] JWT Verification failed:', error.message);
+        res.status(401).json({ error: 'Токен недійсний' });
     }
 };
 
