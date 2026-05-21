@@ -18,27 +18,22 @@ app.use(cookieParser());
 
 
 app.use(cors({ 
-    origin: [
-        'http://localhost:5173', 
-        'https://cinema-library-five.vercel.app'
-    ], 
+    origin: function (origin, callback) {
+        if (!origin 
+            || origin === 'http://localhost:5173' 
+            || origin === 'https://cinema-library-five.vercel.app'
+            || /^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)
+        ) {
+            callback(null, true);
+        } else {
+            callback(new Error('Blocked by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie']
 }));
-
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (['https://cinema-library-five.vercel.app', 'http://localhost:5173'].includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,UPDATE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization, Cookie');
-    next();
-});
-
 
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
@@ -108,7 +103,18 @@ app.get('/api/movies/trending', async (req, res) => {
     }
 });
 
+
+
 // #region АВТЕНТИФІКАЦІЯ
+
+const isProd = process.env.NODE_ENV === 'production';
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProd, 
+    sameSite: isProd ? 'none' : 'lax', 
+    maxAge: 86400000
+};
+
 app.post('/api/register', async (req, res) => {
     const { username, email, password, age, gender, avatar } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: 'Заповніть основні поля!' });
@@ -129,15 +135,9 @@ app.post('/api/register', async (req, res) => {
             throw userError;
         }
 
-        // --- ГЕНЕРАЦІЯ ТОКЕНА ПРИ РЕЄСТРАЦІЇ ---
         const token = generateToken(userData.id);
-        res.cookie('token', token, { 
-            httpOnly: true, 
-            secure: true,    
-            sameSite: 'none',
-            maxAge: 86400000 
-        });
-        // --------------------------------------
+        
+        res.cookie('token', token, cookieOptions);
 
         const defaultLists = [
             { user_id: userData.id, name: 'Watchlist', description: 'Initial target acquisition', is_system: true, is_public: false },
@@ -161,12 +161,8 @@ app.post('/api/login', async (req, res) => {
         }
 
         const token = generateToken(user.id);
-        res.cookie('token', token, { 
-            httpOnly: true, 
-            secure: true,    
-            sameSite: 'none',
-            maxAge: 86400000 
-        });
+        
+        res.cookie('token', token, cookieOptions);
 
         res.json({
             user: { 
@@ -180,6 +176,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 // #endregion
+
 
 // #region РЕЦЕНЗІЇ
 app.post('/api/reviews', protect, async (req, res) => {
