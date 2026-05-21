@@ -104,17 +104,7 @@ app.get('/api/movies/trending', async (req, res) => {
 });
 
 
-
 // #region АВТЕНТИФІКАЦІЯ
-
-const isProd = process.env.NODE_ENV === 'production';
-const cookieOptions = {
-    httpOnly: true,
-    secure: isProd, 
-    sameSite: isProd ? 'none' : 'lax', 
-    maxAge: 86400000
-};
-
 app.post('/api/register', async (req, res) => {
     const { username, email, password, age, gender, avatar } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: 'Заповніть основні поля!' });
@@ -137,7 +127,8 @@ app.post('/api/register', async (req, res) => {
 
         const token = generateToken(userData.id);
         
-        res.cookie('token', token, cookieOptions);
+        // Зберігаємо в кукі (для ПК) та віддаємо токен (для мобілок)
+        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 86400000 });
 
         const defaultLists = [
             { user_id: userData.id, name: 'Watchlist', description: 'Initial target acquisition', is_system: true, is_public: false },
@@ -146,7 +137,7 @@ app.post('/api/register', async (req, res) => {
         ];
         await supabase.from('lists').insert(defaultLists);
 
-        res.status(201).json({ message: 'Success', user: userData });
+        res.status(201).json({ message: 'Success', user: userData, token });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -162,14 +153,15 @@ app.post('/api/login', async (req, res) => {
 
         const token = generateToken(user.id);
         
-        res.cookie('token', token, cookieOptions);
+        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 86400000 });
 
         res.json({
             user: { 
                 id: user.id, username: user.username, email: user.email,
                 avatar: user.avatar, xp: user.xp, level: user.level, rank: user.rank,
                 age: user.age, gender: user.gender
-            }
+            },
+            token
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

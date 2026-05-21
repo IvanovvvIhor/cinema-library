@@ -57,6 +57,7 @@ export const ProfilePage: React.FC = () => {
   }, [user?.id]);
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     dispatch(logout());
     navigate('/');
   };
