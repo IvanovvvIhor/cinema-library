@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MovieCard } from "../components/MovieCard/MovieCard";
@@ -31,16 +31,26 @@ export const CatalogPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // URL - Єдине джерело істини
+  const targetPage = parseInt(searchParams.get('page') || '1', 10);
   const activeGenres = searchParams.get('genres') ? searchParams.get('genres')!.split(',') : [];
+  
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("popularity.desc");
 
   const [loadedMovies, setLoadedMovies] = useState<Movie[]>([]);
-  const [uiPage, setUiPage] = useState(1);
+  const [uiPage, setUiPage] = useState(targetPage);
   const [totalUiPages, setTotalUiPages] = useState(1);
-  const [tmdbPage, setTmdbPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMoreTMDB, setHasMoreTMDB] = useState(true);
+
+  // Кешування стану між рендерами для розумного завантаження
+  const loadedMoviesRef = useRef<Movie[]>([]);
+  const tmdbPageRef = useRef<number>(1);
+  const hasMoreRef = useRef<boolean>(true);
+  
+  // Унікальний ключ фільтрів. Якщо він міняється — кеш скидається
+  const filterKey = `${activeGenres.join(',')}|${search}|${sortBy}|${location.pathname}|${i18n.language}`;
+  const filterKeyRef = useRef<string>(filterKey);
 
   // #region Логіка завантаження
   const fetchBatch = async (pageToFetch: number) => {
@@ -65,51 +75,68 @@ export const CatalogPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const loadInitial = async () => {
+    const load = async () => {
       setIsLoading(true);
-      setUiPage(1);
-      setTmdbPage(1);
-      const { formatted, totalPages } = await fetchBatch(1);
-      setLoadedMovies(formatted);
-      setTotalUiPages(Math.ceil((totalPages * 20) / ITEMS_PER_UI_PAGE));
-      setHasMoreTMDB(totalPages > 1);
+
+      if (filterKey !== filterKeyRef.current) {
+        loadedMoviesRef.current = [];
+        tmdbPageRef.current = 1;
+        hasMoreRef.current = true;
+        filterKeyRef.current = filterKey;
+        
+        if (targetPage !== 1) {
+          searchParams.set('page', '1');
+          setSearchParams(searchParams, { replace: true });
+          return; 
+        }
+      }
+
+      let movies = [...loadedMoviesRef.current];
+      let currentTmdb = tmdbPageRef.current;
+      let more = hasMoreRef.current;
+
+      // Завантажуємо TMDB дані, доки не покриємо потрібну сторінку з URL
+      while (targetPage * ITEMS_PER_UI_PAGE > movies.length && more) {
+        const { formatted, totalPages } = await fetchBatch(currentTmdb);
+        movies = [...movies, ...formatted];
+        setTotalUiPages(Math.ceil((totalPages * 20) / ITEMS_PER_UI_PAGE));
+        currentTmdb++;
+        more = currentTmdb <= totalPages;
+      }
+
+      loadedMoviesRef.current = movies;
+      tmdbPageRef.current = currentTmdb;
+      hasMoreRef.current = more;
+
+      setLoadedMovies(movies);
+      setUiPage(targetPage);
       setIsLoading(false);
     };
-    const timer = setTimeout(() => loadInitial(), 400);
+
+    const timer = setTimeout(() => load(), search ? 500 : 0);
     return () => clearTimeout(timer);
-  }, [searchParams, search, sortBy, location.pathname, i18n.language]);
+  }, [targetPage, filterKey]);
   // #endregion
 
+  // #region Хендлери користувача
   const toggleGenre = (genre: string) => {
     const newGenres = activeGenres.includes(genre) ? activeGenres.filter(g => g !== genre) : [...activeGenres, genre];
-    if (newGenres.length === 0) searchParams.delete('genres'); else searchParams.set('genres', newGenres.join(','));
+    if (newGenres.length === 0) searchParams.delete('genres'); 
+    else searchParams.set('genres', newGenres.join(','));
+    searchParams.set('page', '1'); 
     setSearchParams(searchParams);
   };
 
-  const handlePageClick = async (targetPage: number) => {
-    if (targetPage === uiPage || targetPage < 1 || targetPage > totalUiPages) return;
+  const handlePageClick = (newPage: number) => {
+    if (newPage === uiPage || newPage < 1 || newPage > totalUiPages) return;
+    
+    searchParams.set('page', newPage.toString());
+    setSearchParams(searchParams);
 
-    const requiredItems = targetPage * ITEMS_PER_UI_PAGE;
-    if (requiredItems > loadedMovies.length && hasMoreTMDB) {
-      setIsLoading(true);
-      let currentTmdb = tmdbPage;
-      let fetchedMovies = [...loadedMovies];
-      let moreAvailable: boolean = hasMoreTMDB;
-
-      while (targetPage * ITEMS_PER_UI_PAGE > fetchedMovies.length && moreAvailable) {
-        const { formatted, totalPages } = await fetchBatch(currentTmdb + 1);
-        fetchedMovies = [...fetchedMovies, ...formatted];
-        currentTmdb++;
-        moreAvailable = currentTmdb < totalPages;
-      }
-
-      setLoadedMovies(fetchedMovies);
-      setTmdbPage(currentTmdb);
-      setHasMoreTMDB(moreAvailable);
-      setIsLoading(false);
-    }
-    setUiPage(targetPage);
+    const catalogContainer = document.getElementById('catalog-scroll-container');
+    if (catalogContainer) catalogContainer.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  // #endregion
 
   const startIndex = (uiPage - 1) * ITEMS_PER_UI_PAGE;
   const displayMovies = loadedMovies.slice(startIndex, startIndex + ITEMS_PER_UI_PAGE);
@@ -136,38 +163,24 @@ export const CatalogPage: React.FC = () => {
     const delta = 2; // Кількість сторінок зліва/справа від поточної
     let range: number[] = [];
 
-    // Формуємо центральне вікно сторінок
-    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
-      range.push(i);
-    }
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
 
-    // Коригуємо вікно, якщо ми на самому початку
     if (current - delta <= 2) {
       range = [];
       for (let i = 2; i <= Math.min(total - 1, 6); i++) range.push(i);
     }
     
-    // Коригуємо вікно, якщо ми в самому кінці
     if (current + delta >= total - 1) {
       range = [];
       for (let i = Math.max(2, total - 5); i <= total - 1; i++) range.push(i);
     }
 
     const pages: (number | string)[] = [];
-    
-    if (total > 0) pages.push(1); // Завжди перша сторінка
-
-    if (range.length > 0 && range[0] > 2) {
-      pages.push('...'); // Три крапки після першої
-    }
-
-    pages.push(...range); // Вставляємо центральне вікно
-
-    if (range.length > 0 && range[range.length - 1] < total - 1) {
-      pages.push('...'); // Три крапки перед останньою
-    }
-
-    if (total > 1) pages.push(total); // Завжди остання сторінка
+    if (total > 0) pages.push(1); 
+    if (range.length > 0 && range[0] > 2) pages.push('...'); 
+    pages.push(...range); 
+    if (range.length > 0 && range[range.length - 1] < total - 1) pages.push('...'); 
+    if (total > 1) pages.push(total); 
 
     return pages.map((page, index) => {
       if (page === '...') {
@@ -217,15 +230,16 @@ export const CatalogPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-          <button onClick={() => {searchParams.delete('genres'); setSearchParams(searchParams);}} className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase italic border transition-colors whitespace-nowrap ${activeGenres.length === 0 ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t('catalog.all')}</button>
+          <button onClick={() => {searchParams.delete('genres'); searchParams.set('page', '1'); setSearchParams(searchParams);}} className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase italic border transition-colors whitespace-nowrap ${activeGenres.length === 0 ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t('catalog.all')}</button>
           {GENRE_FILTERS.map((genre) => (
             <button key={genre} onClick={() => toggleGenre(genre)} className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase italic border transition-colors whitespace-nowrap ${activeGenres.includes(genre) ? "bg-[#e50914] border-[#e50914] text-white shadow-md" : "bg-transparent border-gray-200 dark:border-[#2a2a2a] text-gray-600 dark:text-[#8c8c8c]"}`}>{t(`genres.${genre}`)}</button>
           ))}
         </div>
       </header>
 
+      {/* Контейнер отримав id "catalog-scroll-container" для плавного повернення вгору при кліку на пагінацію */}
       <div className="flex-1 px-4 md:px-8 py-5 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2">
+        <div id="catalog-scroll-container" className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2">
           {isLoading && displayMovies.length === 0 ? (
             <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin"></div></div>
           ) : displayMovies.length > 0 ? (
@@ -247,12 +261,10 @@ export const CatalogPage: React.FC = () => {
                 ← {t('catalog.prev')}
             </button>
             
-            {/* Блок з цифрами для ПК/Планшетів */}
             <div className="hidden sm:flex items-center gap-2">
                 {renderPageNumbers()}
             </div>
 
-            {/* Компактний блок для мобілок (показує просто поточну/всього) */}
             <span className="sm:hidden text-gray-900 dark:text-white text-xs font-black uppercase italic bg-gray-100 dark:bg-[#1c1c1c] px-4 py-1.5 rounded-lg border border-gray-200 dark:border-[#2a2a2a]">
                 {uiPage} / {totalUiPages}
             </span>
