@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import type { Gender } from '../../types/User';
@@ -61,7 +60,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           gender,
           avatar: avatar || `https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff`
         });
-        // ЗБЕРІГАЄМО ТОКЕН ДЛЯ МОБІЛОК
         localStorage.setItem('token', response.data.token);
         dispatch(login(response.data.user));
         onClose();
@@ -70,7 +68,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           email: email.trim().toLowerCase(), 
           password 
         });
-        // ЗБЕРІГАЄМО ТОКЕН ДЛЯ МОБІЛОК
         localStorage.setItem('token', response.data.token);
         dispatch(login(response.data.user));
         onClose();
@@ -126,6 +123,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
         <div className="mt-6 text-center text-sm">
           {mode === 'LOGIN' ? <p>{t('auth.newToCinema')} <button type="button" onClick={() => setMode('REGISTER')} className="text-white hover:text-[#e50914]">{t('auth.signup')}</button></p> : <p>{t('auth.alreadyHave')} <button type="button" onClick={() => setMode('LOGIN')} className="text-white hover:text-[#e50914]">{t('auth.login')}</button></p>}
+        </div>
+
+        {/* ПОВЕРНУЛИ КНОПКУ GUEST */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-[#2a2a2a] text-center">
+            <button type="button" onClick={handleGuest} className="text-gray-500 hover:text-gray-900 dark:text-[#8c8c8c] dark:hover:text-white text-sm font-medium transition-colors">
+                {t('auth.continueGuest')}
+            </button>
         </div>
       </div>
     </div>
