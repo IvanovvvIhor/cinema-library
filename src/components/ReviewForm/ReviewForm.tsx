@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { useTranslation } from "react-i18next";
@@ -23,39 +24,51 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   const [rating, setRating] = useState(10);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (text.trim().length < 10) {
+    // --- ВАЛІДАЦІЯ ЗМІСТОВНОСТІ ---
+    const sanitizedContent = text.trim();
+    
+    // 1. Перевірка на мінімальну довжину
+    if (sanitizedContent.length < 10) {
       setError(t('movieDetails.reviewTooShort') || "Minimum 10 characters required.");
       return;
     }
 
+    // 2. Перевірка на "змістовні" символи (заборона на одні пробіли або крапки)
+    const hasMeaningfulChars = /[a-zA-Zа-яА-ЯёЁіІїЇєЄ0-9]/.test(sanitizedContent);
+    if (!hasMeaningfulChars) {
+      setError("Please write a meaningful review, not just symbols.");
+      return;
+    }
+
+    // 3. Захист від спаму крапками (наприклад, "........")
+    if (/^[\.\!\?]{3,}$/.test(sanitizedContent)) {
+      setError("Review cannot consist only of punctuation marks.");
+      return;
+    }
+
     try {
-      // 1. Надсилаємо запит
+      // Решта логіки відправки залишається без змін
       const response = await api.post('/reviews', {
         movie_id: Number(movieId),
         movie_title: movieTitle,
-        content: text.trim(),
+        content: sanitizedContent, // Використовуємо очищений текст
         rating: rating,
         movie_poster: moviePoster,
         user_avatar: user.avatar
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
-      // 2. Обробка відповіді: 
-      // Бекенд на Supabase повертає об'єкт або масив об'єктів. 
-      // Якщо повертається масив, беремо перший елемент.
       const savedData = Array.isArray(response.data) ? response.data[0] : response.data;
 
-      // 3. Формуємо об'єкт так, як його чекає MovieReviews (схема GET /api/reviews)
-      // Це "залатає" дірку з "UN" та порожнім контентом
       const newRev = {
         ...savedData,
-        // Обов'язково додаємо ці поля в корінь, бо твій бекенд FlattenedData їх там чекає
         username: user.username,
         avatar: user.avatar,
-        // Також дублюємо в profiles для сумісності з іншими компонентами
         profiles: {
           username: user.username,
           avatar: user.avatar
@@ -64,10 +77,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         created_at: savedData.created_at || new Date().toISOString()
       };
 
-      // 4. Повідомляємо батьківський компонент
       onReviewPublished(newRev);
-      
-      // Скидаємо форму
       setText("");
       setRating(10);
     } catch (err: any) {

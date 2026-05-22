@@ -30,59 +30,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     i18n.changeLanguage(newLang);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
 
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|icloud\.com)$/i;
-    if (!emailRegex.test(email.trim())) {
-      return setError(t('auth.errorEmailProvider') || 'Only Gmail and iCloud addresses are allowed');
+  // Оновлений фрагмент в AuthModal.tsx
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+
+  // 1. Валідація Email
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|icloud\.com)$/i;
+  if (!emailRegex.test(email.trim())) {
+    return setError("Email must be a valid @gmail.com or @icloud.com address.");
+  }
+
+  // 2. Валідація пароля
+  if (password.length < 8) {
+    return setError("Password must be at least 8 characters long.");
+  }
+  if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return setError("Password must contain at least one uppercase letter and one number.");
+  }
+
+  // 3. Валідація для реєстрації
+  if (mode === 'REGISTER') {
+    if (username.trim().length < 3 || username.trim().length > 20) {
+      return setError("Username must be between 3 and 20 characters.");
     }
-    if (password.length < 6) {
-      return setError(t('auth.errorPasswordShort') || 'Password must be at least 6 characters');
+    if (Number(age) < 16 || Number(age) > 100) {
+      return setError("Age must be between 16 and 100.");
     }
+  }
+
+  try {
+    let response;
     if (mode === 'REGISTER') {
-      if (username.trim().length < 3 || username.length > 20) {
-        return setError(t('auth.errorUsernameLength') || 'Username must be between 3 and 20 characters');
-      }
-      if (Number(age) <= 0 || Number(age) > 120) {
-        return setError(t('auth.errorInvalidAge') || 'Please enter a valid age (1-120)');
-      }
+      response = await api.post('register', {
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        age: Number(age),
+        gender,
+        avatar: avatar || `https://ui-avatars.com/api/?name=${username.trim()}&background=e50914&color=fff`
+      });
+    } else {
+      response = await api.post('login', { 
+        email: email.trim().toLowerCase(), 
+        password 
+      });
     }
 
-    try {
-      let response;
-      if (mode === 'REGISTER') {
-        response = await api.post('register', {
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
-          password,
-          age: Number(age),
-          gender,
-          avatar: avatar || `https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff`
-        });
-      } else {
-        response = await api.post('login', { 
-          email: email.trim().toLowerCase(), 
-          password 
-        });
-      }
-
-      console.log("SERVER RESPONSE:", response.data); 
-
-      if (response.data && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        dispatch(login(response.data.user));
-        onClose();
-      } else {
-        // Якщо токена немає, ми побачимо це повідомлення в Eruda
-        setError("Помилка: Сервер повернув дані, але без токена. Перевір логи сервера.");
-      }
-    } catch (err: any) {
-      console.error("Auth error:", err);
-      setError(err.response?.data?.error || "Сталася невідома помилка");
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      dispatch(login(response.data.user));
+      onClose();
     }
-  };
+  } catch (err: any) {
+    // Академічний стиль: помилка має бути зрозумілою для користувача
+    const serverError = err.response?.data?.error || "Authentication failed. Please check your credentials.";
+    setError(serverError);
+  }
+};
 
   const handleGuest = () => {
     dispatch(setGuestMode());
