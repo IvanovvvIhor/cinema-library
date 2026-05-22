@@ -130,5 +130,17 @@
       "explorer": { "name": "Genre Explorer", "desc": "8 genres watched" },
       "world": { "name": "World Cinema", "desc": "Watch 10 intl. films" }
     }
-  }
+  },
+  "analytics": {
+  "loading": "Loading data...",
+  "noData": "No data to display",
+  "authError": "Authorization or server error",
+  "unknownError": "Unknown error",
+  "backToProfile": "Back to Profile",
+  "title": "Personal Analytics",
+  "totalReviews": "Total Reviews",
+  "averageRating": "Average Rating",
+  "ratingDistribution": "Rating Distribution",
+  "activityTimeline": "Activity Timeline"
+}
 }
