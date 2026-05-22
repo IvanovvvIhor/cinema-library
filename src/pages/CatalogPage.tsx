@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -34,8 +35,10 @@ export const CatalogPage: React.FC = () => {
   // URL - Єдине джерело істини
   const targetPage = parseInt(searchParams.get('page') || '1', 10);
   const activeGenres = searchParams.get('genres') ? searchParams.get('genres')!.split(',') : [];
+  const activeYear = searchParams.get('year') || '';
   
   const [search, setSearch] = useState("");
+  const [year, setYear] = useState(activeYear);
   const [sortBy, setSortBy] = useState("popularity.desc");
 
   const [loadedMovies, setLoadedMovies] = useState<Movie[]>([]);
@@ -49,17 +52,30 @@ export const CatalogPage: React.FC = () => {
   const hasMoreRef = useRef<boolean>(true);
   
   // Унікальний ключ фільтрів. Якщо він міняється — кеш скидається
-  const filterKey = `${activeGenres.join(',')}|${search}|${sortBy}|${location.pathname}|${i18n.language}`;
+  const filterKey = `${activeGenres.join(',')}|${search}|${sortBy}|${activeYear}|${location.pathname}|${i18n.language}`;
   const filterKeyRef = useRef<string>(filterKey);
 
   // #region Логіка завантаження
   const fetchBatch = async (pageToFetch: number) => {
     let endpoint = `/discover/movie?sort_by=${sortBy}&vote_count.gte=100`;
-    if (location.pathname.includes('topRated')) endpoint = `/discover/movie?sort_by=vote_average.desc&vote_count.gte=1000`;
-    else if (location.pathname.includes('newReleases')) endpoint = `/discover/movie?sort_by=primary_release_date.desc&primary_release_year=${new Date().getFullYear()}&vote_count.gte=10`;
+    
+    if (location.pathname.includes('topRated')) {
+        endpoint = `/discover/movie?sort_by=vote_average.desc&vote_count.gte=1000`;
+    } else if (location.pathname.includes('newReleases')) {
+        endpoint = `/discover/movie?sort_by=primary_release_date.desc&primary_release_year=${new Date().getFullYear()}&vote_count.gte=10`;
+    }
 
-    if (search) endpoint = `/search/movie?query=${encodeURIComponent(search)}`;
-    else if (activeGenres.length > 0) endpoint += `&with_genres=${activeGenres.map(g => GENRE_MAP[g]).join(',')}`;
+    // Додаємо фільтр за роком, якщо ми не в розділі "Нові релізи"
+    if (activeYear && !location.pathname.includes('newReleases')) {
+        endpoint += `&primary_release_year=${activeYear}`;
+    }
+
+    if (search) {
+        endpoint = `/search/movie?query=${encodeURIComponent(search)}`;
+        if (activeYear) endpoint += `&primary_release_year=${activeYear}`;
+    } else if (activeGenres.length > 0) {
+        endpoint += `&with_genres=${activeGenres.map(g => GENRE_MAP[g]).join(',')}`;
+    }
 
     const { results, totalPages } = await fetchMovies(endpoint, pageToFetch);
     const formatted: Movie[] = results.map((m: TMDBMovie) => ({
@@ -127,6 +143,14 @@ export const CatalogPage: React.FC = () => {
     setSearchParams(searchParams);
   };
 
+  const handleYearChange = (val: string) => {
+    setYear(val);
+    if (val) searchParams.set('year', val);
+    else searchParams.delete('year');
+    searchParams.set('page', '1');
+    setSearchParams(searchParams);
+  };
+
   const handlePageClick = (newPage: number) => {
     if (newPage === uiPage || newPage < 1 || newPage > totalUiPages) return;
     
@@ -160,7 +184,7 @@ export const CatalogPage: React.FC = () => {
   const renderPageNumbers = () => {
     const total = totalUiPages;
     const current = uiPage;
-    const delta = 2; // Кількість сторінок зліва/справа від поточної
+    const delta = 2; 
     let range: number[] = [];
 
     for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
@@ -219,10 +243,19 @@ export const CatalogPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4 w-full lg:w-auto">
-            <div className="relative flex-1 lg:w-64">
+            <div className="relative flex-1 lg:w-56">
               <img src="images/icons/Search.png" alt="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('catalog.searchPlaceholder')} className="w-full bg-gray-100 dark:bg-[#1c1c1c] border border-transparent rounded-full px-4 py-2 pl-10 text-gray-900 dark:text-white text-[13px] font-bold outline-none transition-colors focus:border-[#e50914]" />
             </div>
+            
+            <input 
+              type="number" 
+              value={year} 
+              onChange={(e) => handleYearChange(e.target.value)} 
+              placeholder="Year" 
+              className="w-20 bg-gray-100 dark:bg-[#1c1c1c] border border-transparent rounded-full px-4 py-2 text-gray-900 dark:text-white text-[13px] font-bold outline-none focus:border-[#e50914] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0" 
+            />
+
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-gray-100 dark:bg-[#1c1c1c] border border-transparent text-gray-700 dark:text-[#8c8c8c] text-[13px] font-black uppercase italic rounded-full px-4 py-2 outline-none cursor-pointer shrink-0">
               {SORT_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
             </select>
@@ -237,7 +270,6 @@ export const CatalogPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Контейнер отримав id "catalog-scroll-container" для плавного повернення вгору при кліку на пагінацію */}
       <div className="flex-1 px-4 md:px-8 py-5 flex flex-col min-h-0">
         <div id="catalog-scroll-container" className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2">
           {isLoading && displayMovies.length === 0 ? (
