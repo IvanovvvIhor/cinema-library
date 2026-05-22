@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppSelector } from '../store/hooks';
+import api from '../api/axios'; // ВИКОРИСТОВУЄМО ТВІЙ AXIOS
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 // --- ТИПІЗАЦІЯ ДАНИХ ---
-
 interface RatingDistribution {
   [key: string]: number;
 }
@@ -49,7 +49,6 @@ const AnalyticsPage: React.FC = () => {
   const { t } = useTranslation();
   const themeMode = useAppSelector((state) => state.theme.mode);
 
-  // Динамічні кольори для SVG графіків Recharts
   const chartColors = {
     text: themeMode === 'dark' ? '#888888' : '#6b7280',
     grid: themeMode === 'dark' ? '#222222' : '#e5e7eb',
@@ -62,19 +61,15 @@ const AnalyticsPage: React.FC = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/analytics`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
+        const token = localStorage.getItem('token');
+        
+        // Використовуємо твій api замість сирого fetch
+        const response = await api.get('/analytics', {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (!response.ok) {
-          throw new Error(t('analytics.authError', 'Помилка авторизації або сервера'));
-        }
-
-        const data: AnalyticsApiResponse = await response.json();
+        // axios автоматично парсить JSON, тому дані лежать у response.data
+        const data: AnalyticsApiResponse = response.data;
 
         const formattedRatings: ChartRatingItem[] = Object.entries(data.ratingDistribution).map(([key, value]) => ({
           rating: key,
@@ -95,9 +90,11 @@ const AnalyticsPage: React.FC = () => {
           formattedTimeline
         });
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Analytics fetch error:", err);
-        setError(err instanceof Error ? err.message : t('analytics.unknownError', 'Невідома помилка'));
+        // axios загортає помилки в err.response
+        const errorMsg = err.response?.data?.error || err.message || t('analytics.unknownError', 'Невідома помилка');
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
       }
