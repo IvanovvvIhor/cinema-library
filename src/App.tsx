@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAppSelector } from "./store/hooks"; // Додали хук
+import { useAppSelector } from "./store/hooks";
 import { SideBar } from "./components/SideBar/SideBar";
 import { HomePage } from "./pages/HomePage";
 import { CatalogPage } from "./pages/CatalogPage";
@@ -10,6 +10,7 @@ import { BottomNav } from "./components/BottomNav/BottomNav";
 import { WatchlistsHubPage } from "./pages/WatchlistsHubPage";
 import { WatchlistDetailPage } from "./pages/WatchlistDetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 
 export const App: React.FC = () => {
   const themeMode = useAppSelector((state) => state.theme.mode);
@@ -34,8 +35,9 @@ export const App: React.FC = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/WatchList" element={<WatchlistsHubPage />} />
           <Route path="/WatchList/:id" element={<WatchlistDetailPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <BottomNav />

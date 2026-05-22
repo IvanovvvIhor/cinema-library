@@ -89,6 +89,12 @@ export const ProfilePage: React.FC = () => {
       <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-4 md:px-8 py-4 flex items-center justify-between">
         <h1 className="text-gray-900 dark:text-white text-lg font-black uppercase italic tracking-tighter">{t('profile.title')}</h1>
         <div className="flex gap-2">
+          <button 
+            onClick={() => navigate('/analytics')} 
+            className="px-4 py-2 bg-gray-100 dark:bg-white/5 text-xs font-black uppercase rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] hover:border-[#e50914]/40 transition-all"
+          >
+            Детальна аналітика
+          </button>
           <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-gray-100 dark:bg-white/5 text-xs font-black uppercase rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] transition-all">
             {t('profile.editProfile')}
           </button>
