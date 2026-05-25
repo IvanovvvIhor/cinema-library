@@ -54,8 +54,12 @@ export const ProfilePage: React.FC = () => {
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    return { headers: { Authorization: `Bearer ${token}` } };
-  };
+    if (!token || token === 'null') {
+        console.warn('[AUTH] Missing token. Request aborted.');
+        return { headers: {} }; 
+        }
+        return { headers: { Authorization: `Bearer ${token}` } };
+    };
 
   useEffect(() => {
     loadProfileData();
