@@ -10,6 +10,57 @@ import { EditProfileModal } from "../components/EditProfileModal/EditProfileModa
 import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 
+// --- КОМПОНЕНТ МОДАЛКИ РОЗРОБНИКА ---
+const AboutDeveloperModal = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#0a0a0a] border border-[#2a2a2a] w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.1)] overflow-hidden flex flex-col font-mono relative">
+        <div className="bg-[#111] px-4 py-2 border-b border-[#2a2a2a] flex justify-between items-center">
+          <span className="text-gray-500 text-[10px] uppercase tracking-widest">Witcher@Black-Cat:~</span>
+          <button onClick={onClose} className="text-gray-500 hover:text-[#e50914] text-lg leading-none transition-colors">&times;</button>
+        </div>
+        <div className="p-6 md:p-8 flex flex-col gap-5 text-gray-300 text-sm">
+          <h2 className="text-white text-xl font-black uppercase italic tracking-widest border-b border-white/10 pb-2">
+            System Architect
+          </h2>
+          
+          <div className="flex flex-col gap-1">
+            <span className="text-[#e50914] text-[10px] font-bold uppercase tracking-widest">Developer</span>
+            <span className="text-white font-bold text-lg uppercase tracking-tight">Іванов Ігор Васильович</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[#e50914] text-[10px] font-bold uppercase tracking-widest">Status</span>
+            <span>Студент групи ПЗ-221</span>
+            <span>Олександрійський політехнічний коледж</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[#e50914] text-[10px] font-bold uppercase tracking-widest">Specialization</span>
+            <span className="text-white">Junior Full-Stack Developer</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[#e50914] text-[10px] font-bold uppercase tracking-widest">Core Tech Stack</span>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {['React', 'TypeScript', 'Redux', 'Node.js', 'PostgreSQL', 'SCSS'].map(tech => (
+                <span key={tech} className="bg-white/5 border border-white/10 px-2 py-1 rounded text-[10px] uppercase tracking-widest">
+                  {tech}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-2 text-[10px] text-gray-600 italic border-t border-white/5 pt-4 text-center">
+            "Logical autonomy and structural hierarchy."
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+// ------------------------------------
+
 export const ProfilePage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -18,6 +69,7 @@ export const ProfilePage: React.FC = () => {
   const { user, isGuest } = useAppSelector((state) => state.auth);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDevModalOpen, setIsDevModalOpen] = useState(false); // Стан для нової модалки
   const [userReviews, setUserReviews] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [_isLoading, setIsLoading] = useState(true);
@@ -25,41 +77,41 @@ export const ProfilePage: React.FC = () => {
   const [isAchExpanded, setIsAchExpanded] = useState(false);
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
 
-    const loadProfileData = async () => {
-        if (!user) return;
-        try {
-        setIsLoading(true);
-        const profileRes = await api.get('/profile', getAuthHeaders()); 
-        if (profileRes.data) {
-            dispatch(setCredentials({ user: profileRes.data })); 
-        }
+  const loadProfileData = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const profileRes = await api.get('/profile', getAuthHeaders()); 
+      if (profileRes.data) {
+        dispatch(setCredentials({ user: profileRes.data })); 
+      }
 
-        const [reviewsRes, achRes] = await Promise.all([
-            api.get('/reviews', getAuthHeaders()),
-            api.get('/achievements', getAuthHeaders())
-        ]);
-        
-        const myReviews = reviewsRes.data.filter((r: any) => 
-            String(r.user_id).trim() === String(user.id).trim()
-        );
-        
-        setUserReviews(myReviews);
-        setAchievements(achRes.data);
-        } catch (err) {
-        console.error("Sync error:", err);
-        } finally {
-        setIsLoading(false);
-        }
+      const [reviewsRes, achRes] = await Promise.all([
+        api.get('/reviews', getAuthHeaders()),
+        api.get('/achievements', getAuthHeaders())
+      ]);
+      
+      const myReviews = reviewsRes.data.filter((r: any) => 
+        String(r.user_id).trim() === String(user.id).trim()
+      );
+      
+      setUserReviews(myReviews);
+      setAchievements(achRes.data);
+    } catch (err) {
+      console.error("Sync error:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     if (!token || token === 'null') {
-        console.warn('[AUTH] Missing token. Request aborted.');
-        return { headers: {} }; 
-        }
-        return { headers: { Authorization: `Bearer ${token}` } };
-    };
+      console.warn('[AUTH] Missing token. Request aborted.');
+      return { headers: {} }; 
+    }
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
 
   useEffect(() => {
     loadProfileData();
@@ -70,7 +122,6 @@ export const ProfilePage: React.FC = () => {
     dispatch(logout());
     navigate('/');
   };
-
 
   if (!user || isGuest) {
     return (
@@ -89,20 +140,35 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-y-auto transition-colors duration-300 pb-20 md:pb-0">
       {isEditModalOpen && <EditProfileModal onClose={() => setIsEditModalOpen(false)} />}
+      {isDevModalOpen && <AboutDeveloperModal onClose={() => setIsDevModalOpen(false)} />}
 
-      <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-4 md:px-8 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-4 md:px-8 py-3 md:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-gray-900 dark:text-white text-lg font-black uppercase italic tracking-tighter">{t('profile.title')}</h1>
-        <div className="flex gap-2">
+        
+        {/* Адаптивний блок кнопок: flex-wrap дозволяє кнопкам безпечно переноситись на мобільних */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button 
+            onClick={() => setIsDevModalOpen(true)} 
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 dark:bg-[#111] text-gray-700 dark:text-gray-300 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl border border-gray-200 dark:border-white/10 hover:text-yellow-500 hover:border-yellow-500/40 transition-all"
+          >
+            Dev Info
+          </button>
           <button 
             onClick={() => navigate('/analytics')} 
-            className="px-4 py-2 bg-gray-100 dark:bg-white/5 text-xs font-black uppercase rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] hover:border-[#e50914]/40 transition-all"
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 dark:bg-white/5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] hover:border-[#e50914]/40 transition-all"
           >
-            Детальна аналітика
+            Аналітика
           </button>
-          <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 bg-gray-100 dark:bg-white/5 text-xs font-black uppercase rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] transition-all">
+          <button 
+            onClick={() => setIsEditModalOpen(true)} 
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 dark:bg-white/5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl border border-gray-200 dark:border-white/10 hover:text-[#e50914] transition-all"
+          >
             {t('profile.editProfile')}
           </button>
-          <button onClick={handleLogout} className="px-4 py-2 bg-red-600/10 text-red-600 text-xs font-black uppercase rounded-xl border border-red-600/20">
+          <button 
+            onClick={handleLogout} 
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-red-600/10 text-red-600 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl border border-red-600/20"
+          >
             {t('profile.logout')}
           </button>
         </div>
@@ -150,7 +216,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ACHIEVEMENTS - INTEGRATED WITH i18next */}
+        {/* ACHIEVEMENTS */}
         <section className="bg-white dark:bg-[#111] border border-gray-200 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setIsAchExpanded(!isAchExpanded)} className="w-full px-8 py-6 flex items-center justify-between hover:bg-white/5 transition-all">
             <h3 className="text-gray-900 dark:text-white text-xs font-black uppercase italic tracking-[0.2em]">{t('profile.achievements.title')}</h3>
@@ -183,7 +249,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* RECENT REVIEWS - SCROLLABLE */}
+        {/* RECENT REVIEWS */}
         <section className="bg-white dark:bg-[#111] border border-gray-200 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl mb-12">
           <button onClick={() => setIsReviewsExpanded(!isReviewsExpanded)} className="w-full px-8 py-6 flex items-center justify-between hover:bg-white/5 transition-all">
             <h3 className="text-gray-900 dark:text-white text-xs font-black uppercase italic tracking-[0.2em]">{t('profile.reviewsTitle')}</h3>
