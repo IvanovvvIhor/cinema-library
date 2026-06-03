@@ -173,21 +173,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400 flex justify-center items-center gap-1">
           {mode === 'LOGIN' ? (
-            <p>
-              {t('auth.newToCinema')}{' '}
-              <button type="button" onClick={() => setMode('REGISTER')} className="text-gray-900 dark:text-white font-bold underline hover:text-[#e50914] dark:hover:text-[#e50914] transition-colors">
+            <>
+              <span>{t('auth.newToCinema')}</span>
+              <button 
+                type="button" 
+                onClick={() => setMode('REGISTER')} 
+                className="text-[#e50914] font-bold underline inline-block transition-transform duration-300 hover:scale-110 active:scale-95"
+              >
                 {t('auth.signup')}
               </button>
-            </p>
+            </>
           ) : (
-            <p>
-              {t('auth.alreadyHave')}{' '}
-              <button type="button" onClick={() => setMode('LOGIN')} className="text-gray-900 dark:text-white font-bold underline hover:text-[#e50914] dark:hover:text-[#e50914] transition-colors">
+            <>
+              <span>{t('auth.alreadyHave')}</span>
+              <button 
+                type="button" 
+                onClick={() => setMode('LOGIN')} 
+                className="text-[#e50914] font-bold underline inline-block transition-transform duration-300 hover:scale-110 active:scale-95"
+              >
                 {t('auth.login')}
               </button>
-            </p>
+            </>
           )}
         </div>
 
