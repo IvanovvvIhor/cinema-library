@@ -1,12 +1,12 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppSelector } from "./store/hooks";
-import { SideBar } from "./components/SideBar/SideBar";
+import { SideBar } from "./components/SideBar";
 import { HomePage } from "./pages/HomePage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { MovieDetailsPage } from "./pages/MovieDetailsPage";
-import { BottomNav } from "./components/BottomNav/BottomNav";
+import { BottomNav } from "./components/BottomNav";
 import { WatchlistsHubPage } from "./pages/WatchlistsHubPage";
 import { WatchlistDetailPage } from "./pages/WatchlistDetailPage";
 import { SettingsPage } from "./pages/SettingsPage";

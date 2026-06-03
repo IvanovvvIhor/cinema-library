@@ -5,8 +5,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { logout, setCredentials } from "../store/authSlice"; 
-import { AuthModal } from "../components/AuthModal/AuthModal";
-import { EditProfileModal } from "../components/EditProfileModal/EditProfileModal";
+import { AuthModal } from "../components/AuthModal";
+import { EditProfileModal } from "../components/EditProfileModal";
 import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 

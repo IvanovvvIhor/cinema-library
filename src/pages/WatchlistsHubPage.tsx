@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
-import { CreateListModal } from "../components/CreateListModal/CreateListModal";
+import { CreateListModal } from "../components/CreateListModal";
 import api from "../api/axios";
 
 export const WatchlistsHubPage: React.FC = () => {

@@ -8,9 +8,9 @@ import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 
 // Імпортуємо компоненти
-import { ReviewForm } from "../components/ReviewForm/ReviewForm";
-import { MovieReviews } from "../components/MovieReviews/MovieReviews";
-import { AddToListPopover } from "../components/AddToListPopover/AddToListPopover";
+import { ReviewForm } from "../components/ReviewForm";
+import { MovieReviews } from "../components/MovieReviews";
+import { AddToListPopover } from "../components/AddToListPopover";
 
 // #region Інтерфейси
 interface Genre { id: number; name: string; }

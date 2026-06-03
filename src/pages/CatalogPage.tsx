@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { MovieCard } from "../components/MovieCard/MovieCard";
+import { MovieCard } from "../components/MovieCard";
 import type { Movie } from "../types/Movie";
 import { fetchMovies } from "../services/api";
 

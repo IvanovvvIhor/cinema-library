@@ -1,10 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const generateToken = (userId) => {
-    // Створюємо токен, який зашифрований нашим секретом з .env
-    // expiresIN: '1d' означає, що через добу юзеру доведеться залогінитись знову
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: '1d'
+const generateToken = (id) => {
+    // Генеруємо токен, який живе 7 днів
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: '7d', 
     });
 };
 

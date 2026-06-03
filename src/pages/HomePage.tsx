@@ -1,10 +1,10 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MovieCard } from "../components/MovieCard/MovieCard";
+import { MovieCard } from "../components/MovieCard";
 import type { Movie } from "../types/Movie";
 import { fetchMovies } from "../services/api";
-import { AuthModal } from "../components/AuthModal/AuthModal";
+import { AuthModal } from "../components/AuthModal";
 import { useAppSelector } from "../store/hooks";
 
 // #region Типи та Інтерфейси

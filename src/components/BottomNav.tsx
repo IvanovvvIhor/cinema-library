@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppSelector } from "../../store/hooks";
+import { useAppSelector } from "../store/hooks";
 
 export const BottomNav: React.FC = () => {
   // #region Хуки та Навігація
