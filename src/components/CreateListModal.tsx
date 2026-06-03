@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { useAppSelector } from '../../store/hooks';
-import type { ListVisibility } from '../../types/Watchlist';
-import api from '../../api/axios';
+import { useAppSelector } from '../store/hooks';
+import type { ListVisibility } from '../types/Watchlist';
+import api from '../api/axios';
 
 interface CreateListModalProps {
   onClose: () => void;

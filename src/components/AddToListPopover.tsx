@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { useAppSelector } from '../../store/hooks';
-import api from '../../api/axios';
-import type { Movie } from '../../types/Movie';
+import { useAppSelector } from '../store/hooks';
+import api from '../api/axios';
+import type { Movie } from '../types/Movie';
 
 interface AddToListPopoverProps {
   movie: Movie; // Тепер тільки один об'єкт, ніяких масивів

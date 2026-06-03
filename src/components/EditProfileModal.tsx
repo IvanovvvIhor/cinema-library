@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { setCredentials } from '../../store/authSlice';
-import type { Gender } from '../../types/User';
-import api from "../../api/axios";
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setCredentials } from '../store/authSlice';
+import type { Gender } from '../types/User';
+import api from "../api/axios";
 
 interface EditProfileModalProps {
   onClose: () => void;

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import type { Movie } from "../../types/Movie";
+import type { Movie } from "../types/Movie";
 
 // #region Інтерфейси
 interface MovieCardProps {
