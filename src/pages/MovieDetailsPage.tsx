@@ -39,7 +39,10 @@ export const MovieDetailsPage: React.FC = () => {
   const [movie, setMovie] = useState<ExtendedMovieDetails | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Стани для трейлера
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+  const [isTrailerErrorOpen, setIsTrailerErrorOpen] = useState(false);
   
   // Стан для Поповера списків
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -80,14 +83,57 @@ export const MovieDetailsPage: React.FC = () => {
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined;
   const trailer = movie.videos?.results.find(v => v.site === "YouTube" && v.type === "Trailer");
 
+  // Обробник кліку на кнопку трейлера
+  const handleTrailerClick = () => {
+    if (trailer) {
+      setIsTrailerOpen(true);
+    } else {
+      setIsTrailerErrorOpen(true);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] transition-colors duration-300">
       
+      {/* МОДАЛКА ТРЕЙЛЕРА */}
       {isTrailerOpen && trailer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md px-4">
           <div className="relative w-full max-w-5xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-[#2a2a2a]">
             <button onClick={() => setIsTrailerOpen(false)} className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors">✕</button>
             <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1`} allowFullScreen title="trailer"></iframe>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛКА ПОМИЛКИ (ТРЕЙЛЕР НЕ ЗНАЙДЕНО) */}
+      {isTrailerErrorOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 transition-colors duration-300">
+          <div className="relative w-full max-w-md bg-white dark:bg-[#111] rounded-2xl p-8 shadow-2xl border border-gray-200 dark:border-[#2a2a2a] text-center animate-in zoom-in-95 duration-200">
+            <button onClick={() => setIsTrailerErrorOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-[#e50914] transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-[#e50914]">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-tighter">
+              {t('movieDetails.noTrailerTitle', 'Трейлер не знайдено')}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-8 leading-relaxed">
+              {t('movieDetails.noTrailerMessage', 'Трейлера фільму, озвученого обраною вами мовою, не знайдено. Спробуйте перейти на сторінку налаштувань, змінити мову та повторити спробу.')}
+            </p>
+            
+            <button 
+              onClick={() => setIsTrailerErrorOpen(false)} 
+              className="w-full px-6 py-3 bg-[#e50914] text-white font-bold rounded-xl hover:bg-red-600 transition"
+            >
+              {t('common.close', 'Зрозуміло')}
+            </button>
           </div>
         </div>
       )}
@@ -107,7 +153,11 @@ export const MovieDetailsPage: React.FC = () => {
                <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>
             </div>
             <div className="flex gap-4 justify-center md:justify-start relative">
-               <button onClick={() => setIsTrailerOpen(true)} className="px-8 py-3 bg-[#e50914] text-white font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/30">▶ Trailer</button>
+               
+               {/* ЗМІНЕНО ОБРОБНИК КЛІКУ ТУТ */}
+               <button onClick={handleTrailerClick} className="px-8 py-3 bg-[#e50914] text-white font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/30">
+                 ▶ Trailer
+               </button>
                
                {user && (
                  <div className="relative">
@@ -124,7 +174,7 @@ export const MovieDetailsPage: React.FC = () => {
 
                    {/* ПОПОВЕР ДЛЯ ВИБОРУ СПИСКУ */}
                    {isPopoverOpen && (
-                     <div className="absolute bottom-full left-0 mb-4 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                     <div className="absolute bottom-full left-0 mb-4 animate-in slide-in-from-bottom-2 fade-in duration-200 z-50">
                         <AddToListPopover 
                           movie={{
                             id: movie.id,
@@ -149,10 +199,9 @@ export const MovieDetailsPage: React.FC = () => {
       {/* 2. CAST SECTION */}
       <section className="py-10 max-w-6xl mx-auto w-full overflow-hidden">
         <h2 className="px-6 md:px-12 text-gray-900 dark:text-white text-xl font-black uppercase italic mb-6 border-l-4 border-[#e50914] tracking-tighter">
-          {t('movieDetails.topCast') || "Strategic Personnel"}
+          {t('movieDetails.topCast', 'Strategic Personnel')}
         </h2>
         
-        {/* ТОТАЛЬНЕ ЗНИЩЕННЯ СКРОЛБАРУ: Вбудовані класи Tailwind ховають його в усіх існуючих браузерах */}
         <div className="px-6 md:px-12 flex flex-nowrap gap-4 overflow-x-auto pb-6 scroll-smooth w-full after:content-[''] after:w-4 after:shrink-0 md:after:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {movie.credits?.cast?.slice(0, 8).map((actor: CastMember) => (
             <div key={actor.id} className="w-[120px] min-w-[120px] shrink-0 flex-none flex flex-col gap-2">
@@ -184,7 +233,9 @@ export const MovieDetailsPage: React.FC = () => {
 
       {/* 3. REVIEWS SECTION */}
       <section className="px-6 md:px-12 py-12 max-w-6xl mx-auto w-full mb-20 bg-gray-50 dark:bg-[#0d0d0d] rounded-t-[3rem] shadow-2xl border-t border-gray-200 dark:border-white/5">
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8 italic uppercase tracking-tighter">Community Debriefings</h2>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8 italic uppercase tracking-tighter">
+          {t('movieDetails.reviewsTitle', 'Community Debriefings')}
+        </h2>
 
         {user ? (
           <ReviewForm 

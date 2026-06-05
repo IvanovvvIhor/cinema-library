@@ -151,7 +151,7 @@ export const ProfilePage: React.FC = () => {
             onClick={() => setIsDevModalOpen(true)} 
             className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-100 dark:bg-[#111] text-gray-700 dark:text-gray-300 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl border border-gray-200 dark:border-white/10 hover:text-yellow-500 hover:border-yellow-500/40 transition-all"
           >
-            Dev Info
+            {t('common.devInfo', 'Dev Info')}
           </button>
           <button 
             onClick={() => navigate('/analytics')} 

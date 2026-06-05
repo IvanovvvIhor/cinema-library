@@ -142,5 +142,15 @@
   "averageRating": "Average Rating",
   "ratingDistribution": "Rating Distribution",
   "activityTimeline": "Activity Timeline"
-}
+},
+"movieDetails": {
+  "topCast": "Strategic Personnel",
+  "reviewsTitle": "Community Debriefings",
+  "noTrailerTitle": "Trailer Not Found",
+  "noTrailerMessage": "A trailer for this movie in your selected language could not be found. Please try changing your language preferences in settings and try again."
+},
+"common": {
+    "devInfo": "Dev Info",
+    "close": "Got it"
+  }
 }
