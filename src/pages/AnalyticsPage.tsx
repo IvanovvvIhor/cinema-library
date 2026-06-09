@@ -31,7 +31,7 @@ interface ChartRatingItem {
 
 interface ChartTimelineItem {
   month: string;
-  actions: number;
+  count: number;
 }
 
 interface FormattedStats {
