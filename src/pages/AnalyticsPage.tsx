@@ -81,7 +81,7 @@ const AnalyticsPage: React.FC = () => {
           .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
           .map(([key, value]) => ({
             month: key,
-            actions: value
+            count: value
           }));
 
         setStats({
@@ -182,7 +182,15 @@ const AnalyticsPage: React.FC = () => {
                 contentStyle={{ backgroundColor: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, fontSize: '12px', color: chartColors.tooltipText, borderRadius: '8px' }} 
                 itemStyle={{ color: chartColors.tooltipText }}
               />
-              <Line type="monotone" dataKey="actions" stroke={chartColors.element} strokeWidth={2} dot={{ r: 4, fill: chartColors.tooltipBg, stroke: chartColors.element, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+              <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    name={t('analytics.activityCount', 'Кількість рецензій')} 
+                    stroke={chartColors.element} 
+                    strokeWidth={2} 
+                    dot={{ r: 4, fill: chartColors.tooltipBg, stroke: chartColors.element, strokeWidth: 2 }} 
+                    activeDot={{ r: 6 }} 
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
