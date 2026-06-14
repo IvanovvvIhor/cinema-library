@@ -92,8 +92,8 @@ export const MovieDetailsPage: React.FC = () => {
     }
   };
 
-// Обробник видалення рецензії (Виправлена типізація)
-  const handleDeleteReview = async (reviewId: number) => {
+  // Обробник видалення рецензії (Виправлена типізація на string для UUID)
+  const handleDeleteReview = async (reviewId: string) => {
     try {
       const token = localStorage.getItem('token');
 
@@ -170,7 +170,6 @@ export const MovieDetailsPage: React.FC = () => {
             </div>
             <div className="flex gap-4 justify-center md:justify-start relative">
                
-               {/* ЗМІНЕНО ОБРОБНИК КЛІКУ ТУТ */}
                <button onClick={handleTrailerClick} className="px-8 py-3 bg-[#e50914] text-white font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-600/30">
                  ▶ Trailer
                </button>

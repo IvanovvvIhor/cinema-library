@@ -1,24 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import api from "../api/axios";
 
 interface MovieReviewsProps {
   reviews: any[];
   currentUser: any;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void; // ВИПРАВЛЕНО: UUID це рядок (string)
 }
 
 export const MovieReviews: React.FC<MovieReviewsProps> = ({ reviews, currentUser, onDelete }) => {
-  const handleDelete = async (id: number) => {
-  if (!window.confirm("Permanent deletion?")) return;
-  try {
-    await api.delete(`/reviews/${id}`);
-    onDelete(id);
-  } catch (err) {
-    alert("System error: Deletion failed.");
-  }
-};
+  
+  const handleDeleteClick = (id: string) => {
+    if (window.confirm("Permanent deletion?")) {
+      onDelete(id);
+    }
+  };
 
   if (reviews.length === 0) {
     return (
@@ -56,9 +52,11 @@ export const MovieReviews: React.FC<MovieReviewsProps> = ({ reviews, currentUser
                     Timestamp: {new Date(rev.created_at).toLocaleDateString()}
                   </span>
                 </div>
+                
+                {/* Кнопка видалення */}
                 {currentUser?.id === rev.user_id && (
                   <button 
-                    onClick={() => handleDelete(rev.id)} 
+                    onClick={() => handleDeleteClick(rev.id)} 
                     className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/5 text-gray-400 hover:bg-red-600 hover:text-white transition-all shadow-sm"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
