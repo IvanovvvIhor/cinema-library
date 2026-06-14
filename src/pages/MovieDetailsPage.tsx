@@ -92,6 +92,22 @@ export const MovieDetailsPage: React.FC = () => {
     }
   };
 
+// Обробник видалення рецензії (Виправлена типізація)
+  const handleDeleteReview = async (reviewId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      await api.delete(`/reviews/${reviewId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setReviews(reviews.filter(r => r.id !== reviewId));
+      
+    } catch (err: any) {
+      console.error("Помилка видалення рецензії:", err);
+    }
+  };
+  
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-[#111] transition-colors duration-300">
       
@@ -255,7 +271,7 @@ export const MovieDetailsPage: React.FC = () => {
         <MovieReviews 
           reviews={reviews} 
           currentUser={user} 
-          onDelete={(reviewId) => setReviews(reviews.filter(r => r.id !== reviewId))} 
+          onDelete={handleDeleteReview} 
         />
       </section>
     </div>
