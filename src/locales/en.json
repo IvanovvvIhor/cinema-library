@@ -152,5 +152,37 @@
 "common": {
     "devInfo": "Dev Info",
     "close": "Got it"
-  }
+  },
+  "home": {
+  "welcomeBack": "Welcome back, {{name}}",
+  "welcomeGuest": "Welcome to Cinema",
+  "title1": "Your personal",
+  "title2": "Cinema Library",
+  "description": "Discover, rate, and catalog films. Build watchlists, track your reviews, and earn badges as you explore cinema.",
+  "browseCatalog": "Browse Catalog",
+  "myWatchlist": "My Watchlist",
+  "signInToSave": "Sign In to Save",
+  "trendingNow": "Trending Now",
+  "seeAll": "See all →"
+},
+"editProfile": {
+  "title": "Edit Profile",
+  "subtitle": "Update your personal information",
+  "username": "Username",
+  "age": "Age",
+  "gender": "Gender",
+  "avatarUrl": "Avatar URL",
+  "emailReadOnly": "Email (Read Only)",
+  "ageError": "Please enter a valid age (1-120)",
+  "updateError": "Failed to update profile"
+},
+"gender": {
+  "male": "Male",
+  "female": "Female",
+  "other": "Other"
+},
+"common": {
+  "cancel": "Cancel",
+  "saveChanges": "Save Changes"
+}
 }

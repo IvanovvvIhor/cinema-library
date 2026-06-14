@@ -4,6 +4,7 @@ import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setCredentials } from '../store/authSlice';
 import type { Gender } from '../types/User';
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
 
 interface EditProfileModalProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ interface EditProfileModalProps {
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) => {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState(user?.username || '');
   const [age, setAge] = useState<number | ''>(user?.age || '');
@@ -25,13 +27,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
     e.preventDefault();
     setError('');
 
-    // Валідація віку (1-120)
     if (Number(age) <= 0 || Number(age) > 120) {
-      return setError('Please enter a valid age (1-120)');
+      return setError(t('editProfile.ageError', 'Please enter a valid age (1-120)'));
     }
 
     try {
-      // Стукаємо в наш новий PUT маршрут
       const response = await api.put('/profile', {
         username,
         age: Number(age),
@@ -39,19 +39,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
         avatar: avatar || `https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff`
       });
 
-      console.log('Profile updated:', response.data);
-      
-      // Оновлюємо Redux новими даними від сервера
       dispatch(setCredentials({ user: response.data.user }));
       onClose();
     } catch (err: any) {
-      const serverError = err.response?.data?.error || 'Failed to update profile';
+      const serverError = err.response?.data?.error || t('editProfile.updateError', 'Failed to update profile');
       setError(serverError);
-      console.error('Update error:', err);
     }
   };
 
-  // Базовий клас для полів вводу (приховуємо стрілочки лічильника)
   const inputBaseClass = `
     w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] 
     rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm outline-none transition-colors 
@@ -73,8 +68,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
         </button>
 
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
-          <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1">Update your personal information</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('editProfile.title', 'Edit Profile')}</h2>
+          <p className="text-gray-500 dark:text-[#8c8c8c] text-sm mt-1">{t('editProfile.subtitle', 'Update your personal information')}</p>
         </div>
 
         {error && (
@@ -86,17 +81,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Username</label>
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">{t('editProfile.username', 'Username')}</label>
             <input required type="text" value={username} onChange={e => setUsername(e.target.value)} className={inputBaseClass} />
           </div>
 
           <div className="flex gap-4">
             <div className="w-1/3">
-              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Age</label>
+              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">{t('editProfile.age', 'Age')}</label>
               <input 
                 required 
                 type="number" 
-                placeholder="Age"
+                placeholder={t('editProfile.age', 'Age')}
                 value={age} 
                 onChange={e => {
                     const val = e.target.value;
@@ -106,21 +101,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
               />
             </div>
             <div className="w-2/3">
-              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Gender</label>
+              <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">{t('editProfile.gender', 'Gender')}</label>
               <select 
                 value={gender} 
                 onChange={e => setGender(e.target.value as Gender)} 
                 className={`${inputBaseClass} appearance-none cursor-pointer`}
               >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
+                <option value="Male">{t('gender.male', 'Male')}</option>
+                <option value="Female">{t('gender.female', 'Female')}</option>
+                <option value="Other">{t('gender.other', 'Other')}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Avatar URL</label>
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">{t('editProfile.avatarUrl', 'Avatar URL')}</label>
             <input 
               type="url" 
               placeholder="https://..." 
@@ -131,7 +126,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
           </div>
 
           <div>
-            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">Email (Read Only)</label>
+            <label className="block text-gray-600 dark:text-[#8c8c8c] text-xs font-medium mb-1 pl-1">{t('editProfile.emailReadOnly', 'Email (Read Only)')}</label>
             <input 
               disabled 
               type="email" 
@@ -146,13 +141,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose }) =
               onClick={onClose}
               className="w-1/2 bg-gray-100 dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] text-gray-700 dark:text-white font-bold py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-[#222] transition-colors"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
             <button 
               type="submit" 
               className="w-1/2 bg-[#e50914] text-white font-bold py-3 rounded-xl hover:bg-red-600 transition shadow-lg shadow-red-500/30 dark:shadow-[0_0_15px_rgba(229,9,20,0.3)]"
             >
-              Save Changes
+              {t('common.saveChanges', 'Save Changes')}
             </button>
           </div>
         </form>
