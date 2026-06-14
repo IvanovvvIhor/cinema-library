@@ -11,14 +11,14 @@ interface MovieReviewsProps {
 
 export const MovieReviews: React.FC<MovieReviewsProps> = ({ reviews, currentUser, onDelete }) => {
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Permanent deletion?")) return;
-    try {
-      await api.delete(`/reviews/${id}`);
-      onDelete(id);
-    } catch (err) {
-      alert("System error: Deletion failed.");
-    }
-  };
+  if (!window.confirm("Permanent deletion?")) return;
+  try {
+    await api.delete(`/reviews/${id}`);
+    onDelete(id);
+  } catch (err) {
+    alert("System error: Deletion failed.");
+  }
+};
 
   if (reviews.length === 0) {
     return (
