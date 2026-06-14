@@ -104,7 +104,7 @@ app.get('/api/movies/trending', async (req, res) => {
                 accept: 'application/json'
             },
             params: {
-                language: 'uk-UA', // Або бери з req.query
+                language: 'uk-UA', 
                 page: req.query.page || 1
             }
         });
@@ -246,6 +246,27 @@ app.get('/api/reviews', async (req, res) => {
         res.json(flattenedData);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/reviews/:id', protect, async (req, res) => {
+    try {
+        const reviewId = req.params.id;
+        const userId = req.user.id;
+
+        const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', reviewId)
+        .eq('user_id', userId);
+
+        if (error) {
+            throw error;
+        }
+
+        res.json({ message: 'Рецензію успішно видалено' });
+    } catch {
+        res.status(500).json({ error: 'Помилка при видаленні рецензії' });
     }
 });
 // #endregion
