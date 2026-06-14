@@ -5,15 +5,14 @@ import React from 'react';
 interface MovieReviewsProps {
   reviews: any[];
   currentUser: any;
-  onDelete: (id: string) => void; // ВИПРАВЛЕНО: UUID це рядок (string)
+  onDelete: (id: string) => void;
 }
 
 export const MovieReviews: React.FC<MovieReviewsProps> = ({ reviews, currentUser, onDelete }) => {
   
+  // Тепер функція просто передає ID нагору без жодних системних вікон
   const handleDeleteClick = (id: string) => {
-    if (window.confirm("Permanent deletion?")) {
-      onDelete(id);
-    }
+    onDelete(id);
   };
 
   if (reviews.length === 0) {
