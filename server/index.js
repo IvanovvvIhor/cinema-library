@@ -146,29 +146,35 @@ app.post('/api/register', async (req, res) => {
         // ІНЖЕНЕРНИЙ ЧОРНИЙ ХІД: Виводимо лінк у логи сервера для швидкого тестування
         console.log(`[VERIFICATION LINK FOR ${email}]: ${verifyUrl}`);
 
-        // 2. Відправка листа через REST API Resend
-        await axios.post('https://api.resend.com/emails', {
-            from: 'Cinema Library <onboarding@resend.dev>',
-            to: [email], // УВАГА: На безкоштовному тарифі сюди дійде лист ТІЛЬКИ якщо це твоя пошта з акаунту Resend
-            subject: 'Account Activation - Cinema Library',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
-                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
-                    <p style="color: #ccc;">Your strategic clearance is almost granted. Please verify your email address to activate your account:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+        // 2. Ізольована відправка листа (перехоплюємо помилки обмежень Resend)
+        try {
+            await axios.post('https://api.resend.com/emails', {
+                from: 'Cinema Library <onboarding@resend.dev>',
+                to: [email], 
+                subject: 'Account Activation - Cinema Library',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
+                        <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
+                        <p style="color: #ccc;">Your strategic clearance is almost granted. Please verify your email address to activate your account:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+                        </div>
+                        <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
                     </div>
-                    <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
-                </div>
-            `
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+                `
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (emailError) {
+            // Глушимо помилку від Resend, щоб вона не зламала реєстрацію
+            console.warn(`[MAILER WARNING]: Resend blocked email to ${email}. Use the console link to verify.`);
+        }
 
-        res.status(201).json({ message: 'Registration successful. Please check your email to verify your account.' });
+        // 3. Успішна відповідь незалежно від того, чи пропустив Resend лист
+        res.status(201).json({ message: 'Registration successful. Please check your email (or server logs) to verify your account.' });
     } catch (error) {
         console.error("Registration Error:", error.response?.data || error.message);
         res.status(500).json({ error: 'Internal server error during registration' });
