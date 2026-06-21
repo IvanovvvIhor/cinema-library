@@ -9,6 +9,9 @@ require('dotenv').config();
 const axios = require('axios');
 const crypto = require('crypto');
 
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY); 
+
 const { hashPassword, comparePasswords } = require('./utils/passwordUtils');
 const { generateToken } = require('./utils/tokenUtils');
 
@@ -146,11 +149,11 @@ app.post('/api/register', async (req, res) => {
         // ІНЖЕНЕРНИЙ ЧОРНИЙ ХІД: Виводимо лінк у логи сервера для швидкого тестування
         console.log(`[VERIFICATION LINK FOR ${email}]: ${verifyUrl}`);
 
-        // 2. Ізольована відправка листа (перехоплюємо помилки обмежень Resend)
+        // 2. Ізольована відправка листа (через офіційний SDK)
         try {
-            await axios.post('https://api.resend.com/emails', {
+            await resend.emails.send({
                 from: 'Cinema Library <onboarding@resend.dev>',
-                to: [email], 
+                to: [email], // Знову ж таки, пройде тільки на твою пошту
                 subject: 'Account Activation - Cinema Library',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
@@ -162,14 +165,8 @@ app.post('/api/register', async (req, res) => {
                         <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
                     </div>
                 `
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
             });
         } catch (emailError) {
-            // Глушимо помилку від Resend, щоб вона не зламала реєстрацію
             console.warn(`[MAILER WARNING]: Resend blocked email to ${email}. Use the console link to verify.`);
         }
 
