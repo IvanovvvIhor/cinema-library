@@ -10,6 +10,9 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+
 const { hashPassword, comparePasswords } = require('./utils/passwordUtils');
 const { generateToken } = require('./utils/tokenUtils');
 
