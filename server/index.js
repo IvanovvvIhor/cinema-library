@@ -56,19 +56,39 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 const PORT = process.env.PORT || 5000;
 
-// Налаштування поштового клієнта (Оптимізовано для Render)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS  
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    family: 4 
+// Кодуємо ключі у формат Base64 для Basic Auth (вимога Mailjet)
+const mailjetAuth = Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64');
+
+await axios.post('https://api.mailjet.com/v3.1/send', {
+    Messages: [
+        {
+            From: {
+                Email: process.env.EMAIL_USER, // Твій Gmail
+                Name: "Cinema Library"
+            },
+            To: [
+                {
+                    Email: email,
+                    Name: username
+                }
+            ],
+            Subject: "Account Activation - Cinema Library",
+            HTMLPart: `
+                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
+                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
+                    <p style="color: #ccc;">Please verify your email address to activate your account:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+                    </div>
+                </div>
+            `
+        }
+    ]
+}, {
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${mailjetAuth}`
+    }
 });
 
 // #region ГЕЙМІФІКАЦІЯ: ATLAS XP ENGINE
