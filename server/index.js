@@ -117,7 +117,7 @@ app.post('/api/register', async (req, res) => {
         const hashedPassword = await hashPassword(password);
         const verificationToken = crypto.randomBytes(32).toString('hex');
 
-        // 1. Запис у базу даних
+        // 1. Запис у базу даних Supabase
         const { data: userData, error: userError } = await supabase
             .from('profiles')
             .insert([{ 
@@ -143,39 +143,28 @@ app.post('/api/register', async (req, res) => {
 
         const verifyUrl = `${process.env.BACKEND_URL || `http://localhost:${PORT}`}/api/verify/${verificationToken}`;
 
-        // 2. Кодуємо ключі у формат Base64 для Basic Auth (вимога Mailjet)
-        const mailjetAuth = Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64');
+        // ІНЖЕНЕРНИЙ ЧОРНИЙ ХІД: Виводимо лінк у логи сервера для швидкого тестування
+        console.log(`[VERIFICATION LINK FOR ${email}]: ${verifyUrl}`);
 
-        // 3. Відправка листа через REST API Mailjet
-        await axios.post('https://api.mailjet.com/v3.1/send', {
-            Messages: [
-                {
-                    From: {
-                        Email: process.env.EMAIL_USER, // Твій Gmail
-                        Name: "Cinema Library"
-                    },
-                    To: [
-                        {
-                            Email: email,
-                            Name: username
-                        }
-                    ],
-                    Subject: "Account Activation - Cinema Library",
-                    HTMLPart: `
-                        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
-                            <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
-                            <p style="color: #ccc;">Please verify your email address to activate your account:</p>
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
-                            </div>
-                        </div>
-                    `
-                }
-            ]
+        // 2. Відправка листа через REST API Resend
+        await axios.post('https://api.resend.com/emails', {
+            from: 'Cinema Library <onboarding@resend.dev>',
+            to: [email], // УВАГА: На безкоштовному тарифі сюди дійде лист ТІЛЬКИ якщо це твоя пошта з акаунту Resend
+            subject: 'Account Activation - Cinema Library',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
+                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
+                    <p style="color: #ccc;">Your strategic clearance is almost granted. Please verify your email address to activate your account:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+                    </div>
+                    <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
+                </div>
+            `
         }, {
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${mailjetAuth}`
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
             }
         });
 
