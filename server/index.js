@@ -7,11 +7,7 @@ const cookieParser = require('cookie-parser');
 const { checkAchievements } = require('./achievementsEngine');
 require('dotenv').config();
 const axios = require('axios');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
 
 const { hashPassword, comparePasswords } = require('./utils/passwordUtils');
 const { generateToken } = require('./utils/tokenUtils');
@@ -55,41 +51,6 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 });
 
 const PORT = process.env.PORT || 5000;
-
-// Кодуємо ключі у формат Base64 для Basic Auth (вимога Mailjet)
-const mailjetAuth = Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64');
-
-await axios.post('https://api.mailjet.com/v3.1/send', {
-    Messages: [
-        {
-            From: {
-                Email: process.env.EMAIL_USER, // Твій Gmail
-                Name: "Cinema Library"
-            },
-            To: [
-                {
-                    Email: email,
-                    Name: username
-                }
-            ],
-            Subject: "Account Activation - Cinema Library",
-            HTMLPart: `
-                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
-                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
-                    <p style="color: #ccc;">Please verify your email address to activate your account:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
-                    </div>
-                </div>
-            `
-        }
-    ]
-}, {
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${mailjetAuth}`
-    }
-});
 
 // #region ГЕЙМІФІКАЦІЯ: ATLAS XP ENGINE
 const awardXP = async (userId, amount) => {
@@ -156,6 +117,7 @@ app.post('/api/register', async (req, res) => {
         const hashedPassword = await hashPassword(password);
         const verificationToken = crypto.randomBytes(32).toString('hex');
 
+        // 1. Запис у базу даних
         const { data: userData, error: userError } = await supabase
             .from('profiles')
             .insert([{ 
@@ -181,25 +143,45 @@ app.post('/api/register', async (req, res) => {
 
         const verifyUrl = `${process.env.BACKEND_URL || `http://localhost:${PORT}`}/api/verify/${verificationToken}`;
 
-        await transporter.sendMail({
-            from: `"Cinema Library" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Account Activation - Cinema Library',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
-                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
-                    <p style="color: #ccc;">Your strategic clearance is almost granted. Please verify your email address to activate your account:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
-                    </div>
-                    <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
-                </div>
-            `
+        // 2. Кодуємо ключі у формат Base64 для Basic Auth (вимога Mailjet)
+        const mailjetAuth = Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64');
+
+        // 3. Відправка листа через REST API Mailjet
+        await axios.post('https://api.mailjet.com/v3.1/send', {
+            Messages: [
+                {
+                    From: {
+                        Email: process.env.EMAIL_USER, // Твій Gmail
+                        Name: "Cinema Library"
+                    },
+                    To: [
+                        {
+                            Email: email,
+                            Name: username
+                        }
+                    ],
+                    Subject: "Account Activation - Cinema Library",
+                    HTMLPart: `
+                        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
+                            <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
+                            <p style="color: #ccc;">Please verify your email address to activate your account:</p>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+                            </div>
+                        </div>
+                    `
+                }
+            ]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${mailjetAuth}`
+            }
         });
 
         res.status(201).json({ message: 'Registration successful. Please check your email to verify your account.' });
     } catch (error) {
-        console.error("Registration Error:", error);
+        console.error("Registration Error:", error.response?.data || error.message);
         res.status(500).json({ error: 'Internal server error during registration' });
     }
 });
