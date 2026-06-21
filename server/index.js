@@ -67,7 +67,8 @@ const transporter = nodemailer.createTransport({
     },
     tls: {
         rejectUnauthorized: false
-    }
+    },
+    family: 4 
 });
 
 // #region ГЕЙМІФІКАЦІЯ: ATLAS XP ENGINE
