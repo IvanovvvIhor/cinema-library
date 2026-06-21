@@ -53,12 +53,17 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 const PORT = process.env.PORT || 5000;
 
-// Налаштування поштового клієнта
+// Налаштування поштового клієнта (Оптимізовано для Render)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS  
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
