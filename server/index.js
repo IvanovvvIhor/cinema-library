@@ -7,7 +7,8 @@ const cookieParser = require('cookie-parser');
 const { checkAchievements } = require('./achievementsEngine');
 require('dotenv').config();
 const axios = require('axios');
-
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 const { hashPassword, comparePasswords } = require('./utils/passwordUtils');
 const { generateToken } = require('./utils/tokenUtils');
@@ -15,7 +16,6 @@ const { generateToken } = require('./utils/tokenUtils');
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-
 
 app.use(cors({ 
     origin: function (origin, callback) {
@@ -45,8 +45,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
-
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
   auth: { persistSession: false },
   db: { schema: 'public' },
@@ -55,10 +53,16 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 const PORT = process.env.PORT || 5000;
 
+// Налаштування поштового клієнта
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS  
+    }
+});
+
 // #region ГЕЙМІФІКАЦІЯ: ATLAS XP ENGINE
-/**
- * Єдина функція для досвіду та рангів.
- */
 const awardXP = async (userId, amount) => {
     try {
         const { data: profile, error: fetchError } = await supabase
@@ -114,20 +118,23 @@ app.get('/api/movies/trending', async (req, res) => {
     }
 });
 
-
-// #region АВТЕНТИФІКАЦІЯ
+// #region АВТЕНТИФІКАЦІЯ ТА ВЕРИФІКАЦІЯ
 app.post('/api/register', async (req, res) => {
     const { username, email, password, age, gender, avatar } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: 'Заповніть основні поля!' });
 
     try {
         const hashedPassword = await hashPassword(password);
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+
         const { data: userData, error: userError } = await supabase
             .from('profiles')
             .insert([{ 
                 username, email, password_hash: hashedPassword,
                 age: age ? Number(age) : null, gender, avatar,
-                xp: 100, level: 1, rank: 'Civilian'
+                xp: 100, level: 1, rank: 'Civilian',
+                is_verified: false,
+                verification_token: verificationToken
             }])
             .select().single();
 
@@ -136,16 +143,6 @@ app.post('/api/register', async (req, res) => {
             throw userError;
         }
 
-        const token = generateToken(userData.id);
-        
-        // Зберігаємо в кукі (для ПК)
-        res.cookie('token', token, { 
-            httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
-            maxAge: 86400000 
-        });
-
         const defaultLists = [
             { user_id: userData.id, name: 'Watchlist', description: 'Initial target acquisition', is_system: true, is_public: false },
             { user_id: userData.id, name: 'Watched', description: 'Archived successful operations', is_system: true, is_public: false },
@@ -153,10 +150,58 @@ app.post('/api/register', async (req, res) => {
         ];
         await supabase.from('lists').insert(defaultLists);
 
-        // ДОДАНО: повертаємо token у JSON, щоб фронтенд міг його зберегти
-        res.status(201).json({ message: 'Success', user: userData, token: token });
+        const verifyUrl = `${process.env.BACKEND_URL || `http://localhost:${PORT}`}/api/verify/${verificationToken}`;
+
+        await transporter.sendMail({
+            from: `"Cinema Library" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Account Activation - Cinema Library',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; background-color: #111; color: #fff; border-radius: 10px;">
+                    <h2 style="color: #e50914;">Welcome to Cinema Library, ${username}!</h2>
+                    <p style="color: #ccc;">Your strategic clearance is almost granted. Please verify your email address to activate your account:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${verifyUrl}" style="background-color: #e50914; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; text-transform: uppercase;">Verify Account</a>
+                    </div>
+                    <p style="color: #888; font-size: 12px;">If you did not request this, please ignore this email.</p>
+                </div>
+            `
+        });
+
+        res.status(201).json({ message: 'Registration successful. Please check your email to verify your account.' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Registration Error:", error);
+        res.status(500).json({ error: 'Internal server error during registration' });
+    }
+});
+
+app.get('/api/verify/:token', async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        const { data: user, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('verification_token', token)
+            .single();
+
+        if (error || !user) {
+            return res.status(400).send('<h1 style="color: red; text-align: center; margin-top: 50px;">Invalid or expired verification link.</h1>');
+        }
+
+        await supabase
+            .from('profiles')
+            .update({ 
+                is_verified: true, 
+                verification_token: null 
+            })
+            .eq('id', user.id);
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}?verified=true`);
+
+    } catch (err) {
+        res.status(500).send('<h1>Internal Server Error</h1>');
     }
 });
 
@@ -164,13 +209,17 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const { data: user, error } = await supabase.from('profiles').select('*').eq('email', email).single();
+        
         if (error || !user || !(await comparePasswords(password, user.password_hash))) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        if (user.is_verified === false) {
+            return res.status(403).json({ error: 'Account not verified. Please check your email inbox.' });
+        }
+
         const token = generateToken(user.id);
         
-        // Зберігаємо в кукі (для ПК)
         res.cookie('token', token, { 
             httpOnly: true, 
             secure: process.env.NODE_ENV === 'production', 
@@ -178,7 +227,6 @@ app.post('/api/login', async (req, res) => {
             maxAge: 86400000 
         });
 
-        // ДОДАНО: повертаємо token у JSON, щоб фронтенд міг його зберегти
         res.json({
             user: { 
                 id: user.id, username: user.username, email: user.email,
@@ -191,12 +239,19 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// #endregion
 
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('token', { 
+        httpOnly: true, 
+        sameSite: 'none', 
+        secure: true
+    });
+    res.json({ message: 'Session terminated. Token purged.' });
+});
+// #endregion
 
 // #region РЕЦЕНЗІЇ
 app.post('/api/reviews', protect, async (req, res) => {
-    // 1. Додаємо movie_poster в деструктуризацію body
     const { movie_id, movie_title, movie_poster, content, rating } = req.body;
     const user_id = req.user.id;
 
@@ -204,12 +259,7 @@ app.post('/api/reviews', protect, async (req, res) => {
         const { data, error } = await supabase
             .from('reviews')
             .insert([{ 
-                user_id, 
-                movie_id, 
-                movie_title, 
-                movie_poster, // 2. Записуємо постер в базу
-                content, 
-                rating 
+                user_id, movie_id, movie_title, movie_poster, content, rating 
             }])
             .select();
 
@@ -228,17 +278,13 @@ app.get('/api/reviews', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('reviews')
-            .select(`
-                *,
-                profiles:user_id (username, avatar)
-            `)
+            .select(`*, profiles:user_id (username, avatar)`)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
         const flattenedData = data.map(review => ({
             ...review,
-            // Тут movie_poster вже буде всередині завдяки "*"
             username: review.profiles?.username || 'Unknown Strategist',
             avatar: review.profiles?.avatar || null
         }));
@@ -260,9 +306,7 @@ app.delete('/api/reviews/:id', protect, async (req, res) => {
         .eq('id', reviewId)
         .eq('user_id', userId);
 
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
 
         res.json({ message: 'Рецензію успішно видалено' });
     } catch {
@@ -271,9 +315,7 @@ app.delete('/api/reviews/:id', protect, async (req, res) => {
 });
 // #endregion
 
-// #region СПИСКИ (ВІДНОВЛЕНО ТА ВИПРАВЛЕНО)
-
-// 1. ОТРИМАТИ ПУБЛІЧНІ СПИСКИ (Раніше викликав 500)
+// #region СПИСКИ
 app.get('/api/lists/public', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -288,7 +330,6 @@ app.get('/api/lists/public', async (req, res) => {
     }
 });
 
-// 2. ОТРИМАТИ СПИСКИ ЮЗЕРА (Раніше викликав 404)
 app.get('/api/lists', protect, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -303,7 +344,6 @@ app.get('/api/lists', protect, async (req, res) => {
     }
 });
 
-// 3. ОТРИМАТИ КОНКРЕТНИЙ СПИСОК
 app.get('/api/lists/:id', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -358,7 +398,6 @@ app.delete('/api/watchlist/:movieId', protect, async (req, res) => {
     }
 });
 
-// 4. ОНОВИТИ ОБКЛАДИНКУ СПИСКУ (PUT /api/lists/:id)
 app.put('/api/lists/:id', protect, async (req, res) => {
     const { poster_url } = req.body;
     try {
@@ -370,20 +409,14 @@ app.put('/api/lists/:id', protect, async (req, res) => {
             .select();
             
         if (error) throw error;
-        
         res.json({ message: 'Visual asset updated', list: data[0] });
     } catch (error) {
-        console.error("[COVER UPDATE ERROR]", error.message);
         res.status(500).json({ error: error.message });
     }
 });
-// #endregion
 
-
-// #region ГОЛОСУВАННЯ
 app.post('/api/lists/:id/vote', protect, async (req, res) => {
     const { id } = req.params;
-    // 1. Жорстко перетворюємо ID юзера на число
     const userId = Number(req.user.id); 
     const { type } = req.body;
 
@@ -391,72 +424,49 @@ app.post('/api/lists/:id/vote', protect, async (req, res) => {
         const { data: list, error: fetchError } = await supabase.from('lists').select('*').eq('id', id).single();
         if (fetchError || !list) return res.status(404).json({ error: 'Sector not found' });
 
-        // 2. Витягуємо масиви, перетворюємо ВСЕ на числа і використовуємо Set, щоб вбити будь-які дублікати!
         let liked_by = [...new Set((list.liked_by || []).map(Number))];
         let disliked_by = [...new Set((list.disliked_by || []).map(Number))];
 
-        // 3. Здорова логіка YouTube (можна відмінити або переключити, але не дублювати)
         if (type === 'like') {
             if (liked_by.includes(userId)) {
-                // Якщо вже лайкав - знімаємо лайк (toggle)
                 liked_by = liked_by.filter(i => i !== userId);
             } else {
-                // Якщо не лайкав - ставимо лайк і прибираємо дизлайк
                 liked_by.push(userId);
                 disliked_by = disliked_by.filter(i => i !== userId);
             }
         } else if (type === 'dislike') {
             if (disliked_by.includes(userId)) {
-                // Якщо вже дизлайкав - знімаємо дизлайк
                 disliked_by = disliked_by.filter(i => i !== userId);
             } else {
-                // Якщо не дизлайкав - ставимо дизлайк і прибираємо лайк
                 disliked_by.push(userId);
                 liked_by = liked_by.filter(i => i !== userId);
             }
         }
 
-        // 4. Оновлюємо базу даних
         const { data: updated, error: updateError } = await supabase.from('lists').update({ 
-            liked_by, 
-            disliked_by, 
-            likes: liked_by.length, 
-            dislikes: disliked_by.length 
+            liked_by, disliked_by, likes: liked_by.length, dislikes: disliked_by.length 
         }).eq('id', id).select();
 
-        if (updateError) {
-            console.error("[DB VOTE UPDATE ERROR]", updateError);
-            throw updateError;
-        }
-
+        if (updateError) throw updateError;
         res.json(updated[0]);
     } catch (err) {
-        console.error("[VOTE ERROR]", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 // #endregion
 
-
-// #region МАРШРУТ ДОСЯГНЕНЬ (Виправлення 404)
+// #region ПРОФІЛЬ ТА АНАЛІТИКА
 app.get('/api/achievements', protect, async (req, res) => {
     try {
-        // 1. Отримуємо всі можливі досягнення з довідника
-        const { data: allAchievements, error: achError } = await supabase
-            .from('achievements')
-            .select('*');
-
+        const { data: allAchievements, error: achError } = await supabase.from('achievements').select('*');
         if (achError) throw achError;
 
-        // 2. Отримуємо досягнення, які вже розблокував саме цей юзер
         const { data: unlocked, error: unlockError } = await supabase
             .from('user_achievements')
             .select('achievement_id, unlocked_at')
             .eq('user_id', req.user.id);
-
         if (unlockError) throw unlockError;
 
-        // 3. Зшиваємо дані для фронтенду
         const response = allAchievements.map(ach => ({
             ...ach,
             is_unlocked: unlocked.some(u => u.achievement_id === ach.id),
@@ -465,13 +475,10 @@ app.get('/api/achievements', protect, async (req, res) => {
 
         res.json(response);
     } catch (error) {
-        console.error("[ACHIEVEMENTS FETCH ERROR]", error.message);
         res.status(500).json({ error: 'Failed to retrieve strategic achievements' });
     }
 });
-// #endregion
 
-// #region ПРОФІЛЬ (Виправлення 404 на /api/profile)
 app.get('/api/profile', protect, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -483,90 +490,77 @@ app.get('/api/profile', protect, async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error) {
-        console.error("[PROFILE FETCH ERROR]", error.message);
         res.status(500).json({ error: 'Failed to retrieve profile data' });
     }
 });
-// #endregion
 
-
-// #region ОНОВЛЕННЯ ПРОФІЛЮ (Виправлення 404 на PUT /api/profile)
 app.put('/api/profile', protect, async (req, res) => {
     const { username, age, gender, avatar } = req.body;
     const userId = req.user.id;
 
     try {
-        console.log(`[STRATEGIC UPDATE] Updating profile for user: ${userId}`);
-
         const { data, error } = await supabase
             .from('profiles')
-            .update({ 
-                username, 
-                age: Number(age), 
-                gender, 
-                avatar 
-            })
+            .update({ username, age: Number(age), gender, avatar })
             .eq('id', userId)
             .select()
             .single();
 
-        if (error) {
-            console.error("[DB UPDATE ERROR]", error.message);
-            return res.status(400).json({ error: error.message });
-        }
+        if (error) return res.status(400).json({ error: error.message });
 
-        // Повертаємо оновленого юзера у форматі, який очікує твій фронтенд
-        res.json({
-            message: 'Profile updated successfully',
-            user: data
-        });
+        res.json({ message: 'Profile updated successfully', user: data });
     } catch (error) {
-        console.error("[SERVER CRASH] Profile update failed:", error.message);
         res.status(500).json({ error: 'Internal server error during profile update' });
+    }
+});
+
+app.get('/api/analytics', protect, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { data: reviews, error } = await supabase.from('reviews').select('rating, created_at').eq('user_id', userId);
+        if (error) throw error;
+
+        const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
+        const timeline = {};
+        let sumRating = 0;
+
+        reviews.forEach(review => {
+            const rating = Math.round(review.rating);
+            if (ratingDistribution[rating] !== undefined) ratingDistribution[rating]++;
+            sumRating += review.rating;
+
+            const monthYear = review.created_at.substring(0, 7);
+            timeline[monthYear] = (timeline[monthYear] || 0) + 1;
+        });
+
+        const averageRating = reviews.length > 0 ? Number((sumRating / reviews.length).toFixed(1)) : 0;
+
+        res.json({ totalReviews: reviews.length, averageRating, ratingDistribution, timeline });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to aggregate analytical data' });
     }
 });
 // #endregion
 
-app.post('/api/logout', (req, res) => {
-    res.clearCookie('token', { 
-        httpOnly: true, 
-        sameSite: 'none', 
-        secure: true
-    });
-    res.json({ message: 'Session terminated. Token purged.' });
-});
-
+// #region PROXY
 app.get('/api/movies/proxy', async (req, res) => {
     const token = process.env.VITE_TMDB_READ_ACCESS_TOKEN || process.env.TMDB_TOKEN;
     
     try {
         const { endpoint, ...params } = req.query;
         if (!endpoint) return res.status(400).json({ error: 'Endpoint required' });
+        if (!token) return res.status(500).json({ error: 'Server configuration error' });
 
-        if (!token) {
-            console.error('❌ Missing TMDB Token');
-            return res.status(500).json({ error: 'Server configuration error' });
-        }
-
-        // Робимо запит. params автоматично розгорне всі фільтри (жанри, сортування тощо)
         const response = await axios.get(`https://api.themoviedb.org/3${endpoint}`, {
-            headers: {
-                Authorization: `Bearer ${token.trim()}`,
-                accept: 'application/json'
-            },
+            headers: { Authorization: `Bearer ${token.trim()}`, accept: 'application/json' },
             params: params 
         });
 
         res.json(response.data);
     } catch (error) {
-        console.error('🔴 PROXY ERROR:', error.response?.data || error.message);
-        res.status(error.response?.status || 500).json({ 
-            error: 'TMDB Liaison Failed',
-            details: error.response?.data || error.message 
-        });
+        res.status(error.response?.status || 500).json({ error: 'TMDB Liaison Failed', details: error.response?.data || error.message });
     }
 });
-
 
 app.get('/api/movies/:id', async (req, res) => {
     try {
@@ -579,55 +573,6 @@ app.get('/api/movies/:id', async (req, res) => {
         res.json(response.data);
     } catch (err) {
         res.status(500).json({ error: 'TMDB Liaison Failed' });
-    }
-});
-
-// #region АНАЛІТИКА
-app.get('/api/analytics', protect, async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        // Отримуємо всі оцінки та дати рецензій поточного користувача
-        const { data: reviews, error } = await supabase
-            .from('reviews')
-            .select('rating, created_at')
-            .eq('user_id', userId);
-
-        if (error) throw error;
-
-        // Ініціалізація структур для агрегації
-        const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
-        const timeline = {};
-        let sumRating = 0;
-
-        // Лінійний прохід O(n) для формування статистики
-        reviews.forEach(review => {
-            // Розподіл оцінок
-            const rating = Math.round(review.rating);
-            if (ratingDistribution[rating] !== undefined) {
-                ratingDistribution[rating]++;
-            }
-            sumRating += review.rating;
-
-            // Хронологія у форматі YYYY-MM
-            const monthYear = review.created_at.substring(0, 7);
-            timeline[monthYear] = (timeline[monthYear] || 0) + 1;
-        });
-
-        const averageRating = reviews.length > 0 
-            ? Number((sumRating / reviews.length).toFixed(1)) 
-            : 0;
-
-        res.json({
-            totalReviews: reviews.length,
-            averageRating,
-            ratingDistribution,
-            timeline
-        });
-
-    } catch (error) {
-        console.error("[ANALYTICS ERROR]", error.message);
-        res.status(500).json({ error: 'Failed to aggregate analytical data' });
     }
 });
 // #endregion
