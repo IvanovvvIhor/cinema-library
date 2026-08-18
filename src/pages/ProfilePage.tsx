@@ -88,7 +88,7 @@ export const ProfilePage: React.FC = () => {
 
       const [reviewsRes, achRes] = await Promise.all([
         api.get('/reviews', getAuthHeaders()),
-        api.get('/achievements', getAuthHeaders())
+        api.get('/profile/achievements', getAuthHeaders())
       ]);
       
       const myReviews = reviewsRes.data.filter((r: any) => 
