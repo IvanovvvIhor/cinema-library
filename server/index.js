@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
+const supabase = require('./config/supabase');
 
 // Імпорт роутерів
 const authRoutes = require('./routes/auth.routes');
@@ -56,5 +57,19 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/lists', listRoutes);
 // Маршрут profile включає в себе /profile, /profile/achievements, /profile/analytics
 app.use('/api/profile', profileRoutes);
+
+// Маршрут-пульс для зовнішнього моніторингу
+app.get('/api/health', async (req, res) => {
+    try {
+        // Беремо всього 1 запис, щоб база даних "прокинулась", але не навантажувалась
+        const { data, error } = await supabase.from('profiles').select('id').limit(1);
+        if (error) throw error;
+
+        res.status(200).json({ status: 'active', database: 'connected' });
+    } catch (err) {
+        console.error('[HEALTH CHECK ERROR]', err.message);
+        res.status(500).json({ status: 'error', details: err.message });
+    }
+});
 
 app.listen(PORT, () => console.log(`🚀 Reactor running on ${PORT}`));
